@@ -1,0 +1,1844 @@
+<?php
+
+/**
+ * Generic Form Builder helper (CodeIgniter 4)  ->  app/Helpers/form_helper.php
+ *
+ * Load with `helper('form');`. CI4 core already has a `form` helper, so every function here is
+ * prefixed `fb_` to avoid clashing with form_open(), form_input(), etc.
+ *
+ * =====================================================================================
+ * CONFIGURATION STRUCTURE (built in the Controller, passed to the view as $formConfig)
+ * =====================================================================================
+ * [
+ *   'form_id'   => 'fb-form',            // DOM id of the <form>; must be unique per page
+ *   'title'     => 'Edit Product',
+ *   'subtitle'  => 'Update the product details',
+ *   'mode'      => 'create'|'edit'|'view',
+ *   'id_field'  => 'id',                 // name of the primary-key field (hidden input)
+ *   'id'        => 12,                   // PK value (defaults to values[id_field])
+ *   'method'    => 'POST',               // HTTP verb for saving; PUT/PATCH are sent as POST + _method
+ *   'delete_method' => 'POST',           // verb for delete (DELETE => POST + _method=DELETE)
+ *   'editable'  => true,                 // false = view-only page, no Edit button
+ *   'deletable' => null,                 // null = true when urls.delete is set
+ *   'csrf'      => true,                 // true = auto CI4 token, false = disable
+ *   'id_prefix' => '',                   // prepended to auto-generated field ids
+ *   'layout'    => ['label_col' => 4],   // label column width (Bootstrap 1-11); control = 12 - label_col
+ *   'locale'    => LOCALE,               // view mode: date fields go through formatDate($value, locale); default = request locale
+ *   'urls' => [
+ *       'submit' => site_url('products/save'),     // create/edit POST target
+ *       'delete' => site_url('products/delete'),
+ *       'edit'   => site_url('products/edit/12'),  // fallback href of the Edit button (no-JS)
+ *       'list'   => site_url('products'),
+ *       'after_save'   => '',            // redirect after save ('' = reload; create mode = reset form)
+ *       'after_delete' => '',            // redirect after delete (falls back to urls.list)
+ *       'telephone_format' => base_url('admin/api/telephone-format-e164'),  // what 'tel' fields format through
+ *   ],
+ *   'labels'   => ['reset'=>'Reset','save'=>'Save Change','edit'=>'Edit','delete'=>'Delete','cancel'=>'Cancel','upload'=>'Upload','keep'=>'Keep It'],
+ *                 // labels, messages and the browser's validation messages default to Language/{locale}/Form.php
+ *   'messages' => ['saved'=>..., 'saveFailed'=>..., 'deleted'=>..., 'deleteFailed'=>..., 'confirmDelete'=>..., 'fixErrors'=>...,
+ *                  'uploaded'=>..., 'uploadFailed'=>..., 'converting'=>..., 'convertFailed'=>..., 'confirmDeleteImage'=>...],
+ *   'heic_decoder' => base_url('assets/vendor/heic2any/heic2any.min.js'),  // loaded only when a HEIC file is picked
+ *   'values'   => ['name' => 'Foo', 'tags' => ['a','b'], 'is_active' => 1],   // saved values (edit/view)
+ *   'fields'   => [ <field>, <field>, ... ],
+ * ]
+ *
+ * FIELD:
+ * [
+ *   'name'  => 'category_id',            // required (not for heading/divider/html)
+ *   'type'  => 'text' | 'email' | 'password' | 'number' | 'range' | 'date' | 'datetime-local' | 'time'
+ *            | 'month' | 'week' | 'color' | 'tel' | 'url' | 'search' | 'hidden'
+ *            | 'textarea' | 'select' | 'radio' | 'checkbox' | 'switch' | 'file'
+ *            | 'heading' (label) | 'divider' | 'html' (html => raw markup)
+ *   'id'          => 'category_id',      // default: id_prefix + name
+ *   'label'       => 'Category',         // default: humanised name
+ *   'help'        => 'Help message',
+ *   'badge'       => 'New' | ['text'=>'New','class'=>'bg-success'],
+ *   'optional'    => true,               // shows the "(optional)" marker
+ *   'default'     => 'x',                // initial value in create mode
+ *   'attrs'       => ['min'=>0,'max'=>10,'step'=>0.5,'required'=>true,'disabled'=>true,'readonly'=>true,
+ *                     'placeholder'=>'..','maxlength'=>50,'pattern'=>'[A-Z]+','class'=>'extra','data-x'=>'y', ...],
+ *                    // shortcut: placeholder/min/max/step/minlength/maxlength/pattern/rows/cols/required/
+ *                    // disabled/readonly/autocomplete may also be set directly on the field
+ *   'readonly_in' => ['edit'],           // make readonly only in these modes (create|edit)
+ *   'disabled_in' => ['edit'],
+ *   'show_in'     => ['create','edit','view'],   // or 'hide_in' => ['create']
+ *   'options'     => [1 => 'Electronics', 2 => 'Books']      // value => label
+ *                 or [['value'=>1,'label'=>'Electronics','disabled'=>true], ...]
+ *   'multiple'    => true,               // select multiple (checkbox with options is always multi-value)
+ *   'country'     => 'TH',               // tel only: country picked at first when the value has none
+ *
+ *   'inline'      => true,               // radio/checkbox groups on one line
+ *   'text'        => 'Enable',           // text beside a single checkbox / switch
+ *   'checked_value' => '1', 'off_value' => '0',     // single checkbox / switch submitted values
+ *   'view_labels' => ['on'=>'Active','off'=>'Inactive'],  // how a single checkbox/switch reads in view mode
+ *   'view'        => function ($value, $field) { return strtoupper($value); },  // custom view-mode text
+ *                    // without 'view': 'tel' reads through formatPhoneNumber(), 'date' through formatDate()
+ *   'rules'       => 'required|min_length[3]|max_length[50]|valid_email'   // CI4 rule string (or array)
+ *   'messages'    => ['required' => 'Please enter a name.'],  // custom messages keyed by rule name
+ *
+ *   file only:
+ *   'accept'      => 'image/*',          // default; image fields also accept .heic/.heif, converted before upload
+ *   'types'       => ['image/jpeg','image/png','image/webp'],  // MIME types that may be sent (default for images)
+ *   'max_size'    => 2097152,            // bytes, checked after any conversion (default 2MB)
+ *   'max_size_label' => '2MB',           // how max_size reads in the error message
+ *   'preview'     => 'https://.../avatar.webp',  // thumbnail shown beside the input ('' = empty box)
+ *   'stored'      => true,               // an image is saved now: upload forms with urls.delete show Delete
+ *   'default_preview' => 'https://.../default.webp',  // thumbnail once the image is deleted ('' = empty box)
+ *   'help'        => 'JPG, PNG or WEBP. Max size 2MB',  // default for images (Form.image-hint)
+ * ]
+ *
+ * TELEPHONE FIELDS ('tel'): a country dropdown (listSupportedTelephoneCountryCodes()) beside the number as the user
+ * dials it. Once both are filled in, urls.telephone_format turns them into E.164 (+66812345678), which goes into a
+ * hidden input of the field's name: that is the value submitted and saved. A saved E.164 value is split back into
+ * the country and the number (splitPhoneNumber()) when the form opens.
+ *
+ * UPLOAD FORMS: a form with a 'file' field is a stand-alone upload form. It always opens in edit mode
+ * (no view pane), is sent as multipart/form-data with its hidden fields (e.g. used-for, image-name and the
+ * id field), and its submit button reads "Upload". HEIC/HEIF images are converted to WebP in the browser
+ * (JPEG where the browser cannot encode WebP) before they are sent. After a successful upload the page stays,
+ * and the thumbnail shows the response's 'url' (or the uploaded file).
+ * With urls.delete set, the form has a Delete button while an image is saved ('stored'): it posts the form's
+ * hidden fields (e.g. used-for and the id field) to urls.delete, and on success the thumbnail shows the
+ * response's 'url' (or 'default_preview') and the button hides until the next upload. One image per form.
+ *
+ * The same `rules` strings are used on the client (JS) and by fb_server_validation() on the server.
+ */
+
+// ---------------------------------------------------------------------------------------------
+// 0. Small utilities
+// ---------------------------------------------------------------------------------------------
+
+if (! function_exists('fb_esc')) {
+    /** HTML/attribute escape (uses CI4 esc() when available). */
+    function fb_esc($value, string $context = 'html'): string
+    {
+        $value = is_scalar($value) ? (string) $value : '';
+
+        return function_exists('esc') ? (string) esc($value, $context) : htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+    }
+}
+
+if (! function_exists('fb_str')) {
+    /** Normalise any scalar to the string used when comparing saved values with option values. */
+    function fb_str($value): string
+    {
+        if ($value === true) {
+            return '1';
+        }
+        if ($value === false || $value === null) {
+            return $value === false ? '0' : '';
+        }
+
+        return is_scalar($value) ? (string) $value : '';
+    }
+}
+
+if (! function_exists('fb_attrs')) {
+    /**
+     * Turn ['id'=>'x','required'=>true,'disabled'=>false,'class'=>['a','b']] into ` id="x" required class="a b"`.
+     * null/false are skipped, true prints the bare attribute, int keys print bare attributes.
+     */
+    function fb_attrs(array $attrs): string
+    {
+        $out = '';
+        foreach ($attrs as $key => $value) {
+            if (is_int($key)) {
+                $out .= ' ' . fb_esc($value, 'attr');
+                continue;
+            }
+            if ($value === null || $value === false) {
+                continue;
+            }
+            if ($value === true) {
+                $out .= ' ' . $key;
+                continue;
+            }
+            if (is_array($value)) {
+                $value = implode(' ', array_filter($value, static fn ($x) => $x !== null && $x !== '' && $x !== false));
+            }
+            $out .= ' ' . $key . '="' . fb_esc($value, 'attr') . '"';
+        }
+
+        return $out;
+    }
+}
+
+if (! function_exists('fb_humanize')) {
+    function fb_humanize(string $name): string
+    {
+        return ucwords(trim(str_replace(['_', '-', '.'], ' ', preg_replace('/\[\]$/', '', $name))));
+    }
+}
+
+if (! function_exists('fb_is_input')) {
+    /** True for real inputs; false for heading / divider / html items. */
+    function fb_is_input(array $field): bool
+    {
+        return ! in_array($field['type'] ?? 'text', ['heading', 'divider', 'html'], true);
+    }
+}
+
+if (! function_exists('fb_options')) {
+    /** Normalise options to [['value'=>string,'label'=>string,'disabled'=>bool,'attrs'=>array], ...]. */
+    function fb_options($options): array
+    {
+        $out = [];
+        foreach ((array) $options as $key => $opt) {
+            if (is_array($opt)) {
+                $value = $opt['value'] ?? $key;
+                $out[] = [
+                    'value'    => fb_str($value),
+                    'label'    => (string) ($opt['label'] ?? $value),
+                    'disabled' => ! empty($opt['disabled']),
+                    'attrs'    => (array) ($opt['attrs'] ?? []),
+                ];
+            } else {
+                $out[] = ['value' => (string) $key, 'label' => (string) $opt, 'disabled' => false, 'attrs' => []];
+            }
+        }
+
+        return $out;
+    }
+}
+
+if (! function_exists('fb_values_array')) {
+    /** Saved value -> list of strings (arrays, JSON arrays, comma lists and scalars are all accepted). */
+    function fb_values_array($value, bool $multiple = true): array
+    {
+        if ($value === null || $value === '') {
+            return [];
+        }
+        if (is_array($value)) {
+            return array_map('fb_str', array_values($value));
+        }
+        if (is_string($value) && $multiple) {
+            $trim = trim($value);
+            if ($trim !== '' && $trim[0] === '[') {
+                $json = json_decode($trim, true);
+                if (is_array($json)) {
+                    return array_map('fb_str', array_values($json));
+                }
+            }
+
+            return array_map('trim', explode(',', $value));
+        }
+
+        return [fb_str($value)];
+    }
+}
+
+if (! function_exists('fb_input_value')) {
+    /** Saved value formatted for the HTML control type (e.g. DATETIME "2026-10-30 14:30:00" -> datetime-local). */
+    function fb_input_value(array $f): string
+    {
+        $v = $f['value'] ?? null;
+        if ($v === null || is_array($v) || is_object($v) || $f['type'] === 'password') {
+            return '';
+        }
+        $v = fb_str($v);
+        $m = [];
+        switch ($f['type']) {
+            case 'date':
+                return preg_match('/^\d{4}-\d{2}-\d{2}/', $v) ? substr($v, 0, 10) : $v;
+            case 'datetime-local':
+                return preg_match('/^(\d{4}-\d{2}-\d{2})[ T](\d{2}:\d{2})/', $v, $m) ? $m[1] . 'T' . $m[2] : $v;
+            case 'month':
+                return preg_match('/^\d{4}-\d{2}/', $v) ? substr($v, 0, 7) : $v;
+            case 'time':
+                return preg_match('/(\d{2}:\d{2}(?::\d{2})?)/', $v, $m) ? $m[1] : $v;
+        }
+
+        return $v;
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// 1. Validation rules (CI4 rule strings -> client rules / server rules)
+// ---------------------------------------------------------------------------------------------
+
+if (! function_exists('fb_rule_pairs')) {
+    /** 'required|min_length[3]' or ['required','min_length'=>3] -> [['required',true],['min_length','3']] */
+    function fb_rule_pairs($rules): array
+    {
+        if (is_string($rules)) {
+            $rules = array_filter(array_map('trim', explode('|', $rules)), 'strlen');
+        }
+        $pairs = [];
+        foreach ((array) $rules as $key => $rule) {
+            if (is_string($key)) {
+                $pairs[] = [$key, $rule];
+            } elseif (is_string($rule) && preg_match('/^([A-Za-z_]+)(?:\[(.*)\])?$/s', $rule, $m)) {
+                $pairs[] = [$m[1], $m[2] ?? true];
+            }
+        }
+
+        return $pairs;
+    }
+}
+
+if (! function_exists('fb_rule_strings')) {
+    /** Rules -> list of CI4 rule strings: ['required','min_length[3]']. */
+    function fb_rule_strings($rules): array
+    {
+        $out = [];
+        foreach (fb_rule_pairs($rules) as [$name, $param]) {
+            if ($param === true) {
+                $out[] = $name;
+            } else {
+                $out[] = $name . '[' . (is_array($param) ? implode(',', $param) : $param) . ']';
+            }
+        }
+
+        return $out;
+    }
+}
+
+if (! function_exists('fb_parse_rules')) {
+    /** CI4 rules -> normalised client-side rule map understood by the generated JavaScript. */
+    function fb_parse_rules($rules): array
+    {
+        $o = [];
+        foreach (fb_rule_pairs($rules) as [$name, $p]) {
+            switch ($name) {
+                case 'required':
+                    $o['required'] = true;
+                    break;
+                case 'min_length':
+                    $o['minlength'] = (int) $p;
+                    break;
+                case 'max_length':
+                    $o['maxlength'] = (int) $p;
+                    break;
+                case 'exact_length':
+                    $o['minlength'] = $o['maxlength'] = (int) $p;
+                    break;
+                case 'greater_than_equal_to':
+                    $o['min'] = $p;
+                    break;
+                case 'less_than_equal_to':
+                    $o['max'] = $p;
+                    break;
+                case 'greater_than':
+                    $o['gt'] = $p;
+                    break;
+                case 'less_than':
+                    $o['lt'] = $p;
+                    break;
+                case 'numeric':
+                case 'integer':
+                case 'decimal':
+                case 'alpha':
+                case 'alpha_numeric':
+                case 'alpha_dash':
+                    $o[$name] = true;
+                    break;
+                case 'is_natural':
+                    $o['natural'] = true;
+                    break;
+                case 'is_natural_no_zero':
+                    $o['natural_nz'] = true;
+                    break;
+                case 'valid_email':
+                    $o['email'] = true;
+                    break;
+                case 'valid_url':
+                case 'valid_url_strict':
+                    $o['url'] = true;
+                    break;
+                case 'valid_date':
+                    $o['date'] = true;
+                    break;
+                case 'in_list':
+                    $o['in_list'] = is_array($p) ? array_map('strval', $p) : array_map('trim', explode(',', (string) $p));
+                    break;
+                case 'matches':
+                    $o['matches'] = (string) $p;
+                    break;
+                case 'regex_match':
+                    $m = [];
+                    if (preg_match('#^(.)(.*)\1([a-z]*)$#s', (string) $p, $m)) {
+                        $flags = preg_replace('/[^gimsuy]/', '', $m[3]);
+                        // PCRE writes code points as \x{1F600}; a JavaScript /u RegExp as \u{1F600}
+                        $source = str_contains($flags, 'u') ? preg_replace('/\\\\x\{([0-9A-Fa-f]+)\}/', '\\u{$1}', $m[2]) : $m[2];
+                        $o['regex'] = ['source' => $source, 'flags' => $flags];
+                    }
+                    break;
+            }
+        }
+
+        return $o;
+    }
+}
+
+if (! function_exists('fb_server_validation')) {
+    /**
+     * Build CI4 server-side validation from the SAME config, so client and server never drift apart.
+     *
+     *   $v = fb_server_validation($config);
+     *   if (! $this->validate($v['rules'], $v['messages'])) { ... }
+     */
+    function fb_server_validation(array $form): array
+    {
+        $form     = fb_defaults($form);
+        $rules    = [];
+        $messages = [];
+        $map      = [
+            'required' => 'required', 'minlength' => 'min_length', 'maxlength' => 'max_length',
+            'min' => 'greater_than_equal_to', 'max' => 'less_than_equal_to', 'email' => 'valid_email',
+            'url' => 'valid_url', 'numeric' => 'numeric', 'integer' => 'integer', 'regex' => 'regex_match',
+            'in_list' => 'in_list', 'matches' => 'matches',
+        ];
+
+        foreach (fb_fields($form, 'edit') as $f) {
+            if (! fb_is_input($f) || in_array($f['type'], ['hidden', 'file'], true) || ! empty($f['attrs']['disabled']) || ! empty($f['attrs']['readonly'])) {
+                continue; // a file is not in the POST data; check it with $this->request->getFile()
+            }
+            $parts = fb_rule_strings($f['rules'] ?? []);
+            $has   = static function (string $n) use (&$parts): bool {
+                foreach ($parts as $p) {
+                    if (strpos($p, $n) === 0 && ($p === $n || $p[strlen($n)] === '[')) {
+                        return true;
+                    }
+                }
+
+                return false;
+            };
+            $c     = $f['rules_client'];
+            $isNum = in_array($f['type'], ['number', 'range'], true);
+
+            if (! empty($c['required']) && ! $has('required')) {
+                array_unshift($parts, 'required');
+            }
+            if (isset($c['minlength']) && ! $has('min_length') && ! $f['multiple']) {
+                $parts[] = 'min_length[' . $c['minlength'] . ']';
+            }
+            if (isset($c['maxlength']) && ! $has('max_length') && ! $f['multiple']) {
+                $parts[] = 'max_length[' . $c['maxlength'] . ']';
+            }
+            if ($isNum) {
+                if (isset($c['min']) && ! $has('greater_than_equal_to')) {
+                    $parts[] = 'greater_than_equal_to[' . $c['min'] . ']';
+                }
+                if (isset($c['max']) && ! $has('less_than_equal_to')) {
+                    $parts[] = 'less_than_equal_to[' . $c['max'] . ']';
+                }
+                if (! $has('numeric')) {
+                    $parts[] = 'numeric';
+                }
+            }
+            if (! empty($c['email']) && ! $has('valid_email')) {
+                $parts[] = 'valid_email';
+            }
+            if (! empty($c['url']) && ! $has('valid_url')) {
+                $parts[] = 'valid_url';
+            }
+
+            // Saved values differ from labels, so validate the *value* is one of the allowed option values.
+            $values = array_column($f['options'], 'value');
+            $okList = $values && ! array_filter($values, static fn ($v) => strpos($v, ',') !== false);
+            if ($f['multiple']) {
+                $rules[$f['name']] = empty($c['required']) ? 'permit_empty' : 'required';
+                if ($okList) {
+                    $rules[$f['name'] . '.*'] = 'in_list[' . implode(',', $values) . ']';
+                }
+            } else {
+                if ($okList && in_array($f['type'], ['select', 'radio'], true) && ! $has('in_list')) {
+                    $parts[] = 'in_list[' . implode(',', $values) . ']';
+                }
+                if (empty($c['required']) && $parts) {
+                    array_unshift($parts, 'permit_empty');
+                }
+                if ($parts) {
+                    $rules[$f['name']] = implode('|', $parts);
+                }
+            }
+
+            foreach ((array) ($f['messages'] ?? []) as $rule => $text) {
+                $messages[$f['name']][$map[$rule] ?? $rule] = $text;
+            }
+        }
+
+        return ['rules' => $rules, 'messages' => $messages];
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// 2. Config normalisation
+// ---------------------------------------------------------------------------------------------
+
+if (! function_exists('fb_csrf')) {
+    function fb_csrf()
+    {
+        if (! function_exists('csrf_token')) {
+            return false;
+        }
+
+        return [
+            'name'   => csrf_token(),
+            'hash'   => function_exists('csrf_hash') ? csrf_hash() : '',
+            'header' => function_exists('csrf_header') ? csrf_header() : 'X-CSRF-TOKEN',
+        ];
+    }
+}
+
+if (! function_exists('fb_defaults')) {
+    /** Merge a controller config with defaults. Idempotent, so every helper can safely call it. */
+    function fb_defaults(array $form): array
+    {
+        if (! empty($form['_fb_ready'])) {
+            return $form;
+        }
+
+        $form = array_replace_recursive([
+            'form_id'       => 'fb-form',
+            'title'         => '',
+            'subtitle'      => '',
+            'mode'          => 'create',
+            'id_field'      => 'id',
+            'id'            => null,
+            'method'        => 'POST',
+            'delete_method' => 'POST',
+            'editable'      => true,
+            'deletable'     => null,
+            'csrf'          => true,
+            'id_prefix'     => '',
+            'layout'        => ['label_col' => 4],
+            'locale'        => service('request')->getLocale(),
+            'urls'          => ['submit' => '', 'delete' => '', 'edit' => '#', 'list' => '', 'after_save' => '', 'after_delete' => '',
+                                'telephone_format' => function_exists('base_url') ? base_url('admin/api/telephone-format-e164') : ''],
+            'labels'        => [
+                'reset'  => lang('Form.button.reset'),
+                'save'   => lang('Form.button.save'),
+                'edit'   => lang('Form.button.edit'),
+                'delete' => lang('Form.button.delete'),
+                'cancel' => lang('Form.button.cancel'),
+                'upload' => lang('Form.button.upload'),
+                'keep'   => lang('Form.button.keep'),
+            ],
+            'messages'      => [
+                'saved'         => lang('Form.message.saved'),
+                'saveFailed'    => lang('Form.message.save-failed'),
+                'deleted'       => lang('Form.message.deleted'),
+                'deleteFailed'  => lang('Form.message.delete-failed'),
+                'confirmDelete' => lang('Form.message.confirm-delete'),
+                'fixErrors'     => lang('Form.message.fix-errors'),
+                'uploaded'      => lang('Form.message.uploaded'),
+                'uploadFailed'  => lang('Form.message.upload-failed'),
+                'converting'    => lang('Form.message.converting'),
+                'convertFailed' => lang('Form.message.convert-failed'),
+                'confirmDeleteImage' => lang('Form.message.confirm-delete-image'),
+            ],
+            'heic_decoder'  => function_exists('base_url') ? base_url('assets/vendor/heic2any/heic2any.min.js') : '',
+            'values'        => [],
+            'fields'        => [],
+        ], $form);
+
+        $form['mode']      = in_array($form['mode'], ['create', 'edit', 'view'], true) ? $form['mode'] : 'create';
+        // a form with a file field is a stand-alone upload form: always edit mode, nothing to view
+        $form['upload']    = in_array('file', array_map(static fn ($f) => strtolower((string) ($f['type'] ?? 'text')), (array) $form['fields']), true);
+        if ($form['upload']) {
+            $form['mode'] = 'edit';
+        }
+        $form['edit_mode'] = $form['mode'] === 'create' ? 'create' : 'edit';
+        $form['method']    = strtoupper((string) $form['method']);
+        $form['form_id']   = preg_replace('/[^A-Za-z0-9_\-]/', '_', (string) $form['form_id']);
+        $form['layout']['label_col'] = max(1, min(11, (int) $form['layout']['label_col']));
+        if ($form['id'] === null) {
+            $form['id'] = $form['values'][$form['id_field']] ?? '';
+        }
+        if ($form['csrf'] === true) {
+            $form['csrf'] = fb_csrf();
+        } elseif (! is_array($form['csrf'])) {
+            $form['csrf'] = false;
+        }
+        if ($form['deletable'] === null) {
+            $form['deletable'] = ! empty($form['urls']['delete']);
+        }
+        $form['_fb_ready'] = true;
+
+        return $form;
+    }
+}
+
+if (! function_exists('fb_field')) {
+    /**
+     * Normalise one field for a pane ('edit' = create/edit inputs, 'view' = read-only text).
+     * Returns null when the field should not appear in that pane.
+     */
+    function fb_field(array $f, array $form, string $pane = 'edit'): ?array
+    {
+        $f['type'] = strtolower((string) ($f['type'] ?? 'text'));
+        $mode      = $pane === 'view' ? 'view' : $form['edit_mode'];
+
+        if (isset($f['show_in']) && ! in_array($mode, (array) $f['show_in'], true)) {
+            return null;
+        }
+        if (isset($f['hide_in']) && in_array($mode, (array) $f['hide_in'], true)) {
+            return null;
+        }
+        if (! fb_is_input($f)) {
+            return $f;
+        }
+
+        $name = (string) ($f['name'] ?? '');
+        if ($name === '' || ($pane === 'view' && $f['type'] === 'hidden')) {
+            return null;
+        }
+
+        $type = $f['type'];
+        $base = preg_replace('/\[\]$/', '', $name);
+
+        $f['name']     = $base;
+        $f['locale']   = $f['locale'] ?? $form['locale'];
+        $f['label']    = (string) ($f['label'] ?? fb_humanize($base));
+        $f['id']       = (string) ($f['id'] ?? ($form['id_prefix'] . preg_replace('/[^A-Za-z0-9_\-]/', '_', $base)));
+        $f['options']  = fb_options($f['options'] ?? []);
+        $f['group']    = in_array($type, ['checkbox', 'radio'], true) && $f['options'] !== [];
+        $f['single']   = in_array($type, ['checkbox', 'switch'], true) && $f['options'] === [];
+        $f['multiple'] = ! empty($f['multiple']) || ($type === 'checkbox' && $f['group']);
+        if (($type !== 'select' && $type !== 'checkbox') || $f['single']) {
+            $f['multiple'] = false;
+        }
+        $f['input_name'] = $base . ($f['multiple'] ? '[]' : '');
+
+        // Saved value (create mode falls back to 'default')
+        $values = (array) $form['values'];
+        if (array_key_exists($base, $values)) {
+            $val = $values[$base];
+        } else {
+            $val = $form['mode'] === 'create' ? ($f['default'] ?? null) : null;
+        }
+        $f['value'] = $val;
+
+        // Single checkbox / switch
+        $f['checked_value'] = fb_str($f['checked_value'] ?? '1');
+        $f['off_value']     = fb_str($f['off_value'] ?? '0');
+        $f['checked']       = $f['single'] && ($val === true || fb_str($val) === $f['checked_value']);
+
+        // Attributes
+        $a = (array) ($f['attrs'] ?? []);
+        foreach (['placeholder', 'min', 'max', 'step', 'minlength', 'maxlength', 'pattern', 'rows', 'cols', 'autocomplete', 'required', 'disabled', 'readonly'] as $k) {
+            if (array_key_exists($k, $f) && ! array_key_exists($k, $a)) {
+                $a[$k] = $f[$k];
+            }
+        }
+        foreach (['readonly', 'disabled'] as $k) {
+            if (in_array($mode, (array) ($f[$k . '_in'] ?? []), true)) {
+                $a[$k] = true;
+            }
+        }
+
+        // Rules <-> attributes (rules also become native attributes, attributes also become rules)
+        $rules  = fb_parse_rules($f['rules'] ?? []);
+        $isText = in_array($type, ['text', 'email', 'password', 'search', 'tel', 'url', 'textarea'], true);
+        $isNum  = in_array($type, ['number', 'range'], true);
+        if (! empty($a['required'])) {
+            $rules['required'] = true;
+        }
+        if ($isText) {
+            foreach (['minlength', 'maxlength'] as $k) {
+                if (isset($rules[$k]) && ! isset($a[$k])) {
+                    $a[$k] = $rules[$k];
+                }
+            }
+        }
+        if ($isNum) {
+            foreach (['min', 'max'] as $k) {
+                if (isset($rules[$k]) && ! isset($a[$k])) {
+                    $a[$k] = $rules[$k];
+                }
+            }
+        }
+        if (! empty($rules['required']) && ! $f['group']) {
+            $a['required'] = true;
+        }
+        if ($f['group']) {
+            unset($a['required']); // "required" on a checkbox group would force ALL boxes; JS validates the group instead
+        }
+        foreach (['min', 'max', 'minlength', 'maxlength', 'step', 'pattern'] as $k) {
+            if (isset($a[$k]) && $a[$k] !== '') {
+                $rules[$k] = $a[$k];
+            }
+        }
+        if ($type === 'email') {
+            $rules['email'] = true;
+        } elseif ($type === 'url') {
+            $rules['url'] = true;
+        } elseif ($type === 'number') {
+            $rules['numeric'] = true;
+        }
+
+        if ($type === 'file') {
+            $image          = str_starts_with((string) ($f['accept'] ?? 'image/*'), 'image/');
+            $f['accept']    = (string) ($f['accept'] ?? 'image/*');
+            $f['types']     = (array) ($f['types'] ?? ($image ? ['image/jpeg', 'image/png', 'image/webp'] : []));
+            $f['heic']      = $image; // HEIC/HEIF is converted in the browser, so the picker offers it too
+            $f['max_size']  = (int) ($f['max_size'] ?? 2 * 1024 * 1024);
+            $f['max_size_label'] = (string) ($f['max_size_label'] ?? round($f['max_size'] / 1048576, 1) . 'MB');
+            $f['help']      = $f['help'] ?? ($image ? lang('Form.image-hint', [$f['max_size_label']]) : '');
+            $f['preview']   = (string) ($f['preview'] ?? '');
+            $f['stored']    = ! empty($f['stored']);
+            $f['default_preview'] = (string) ($f['default_preview'] ?? '');
+            $a['accept']    = $f['accept'] . ($f['heic'] ? ',.heic,.heif' : '');
+        }
+
+        if ($type === 'tel' && $pane !== 'view') {
+            // the saved E.164 number, split into the dropdown's country and the number as dialled there
+            [$country, $local] = function_exists('splitPhoneNumber') ? splitPhoneNumber(fb_str($val)) : ['', fb_str($val)];
+            $codes            = function_exists('listSupportedTelephoneCountryCodes') ? listSupportedTelephoneCountryCodes() : [];
+            $f['tel_codes']   = $codes;
+            $f['tel_country'] = isset($codes[$country]) ? $country : (fb_str($val) === '' ? strtoupper((string) ($f['country'] ?? '')) : '');
+            $f['tel_local']   = $local;
+            unset($rules['minlength'], $rules['maxlength'], $a['minlength']); // they are about the E.164 value, checked by the server
+        }
+
+        $f['attrs']        = $a;
+        $f['rules_client'] = $rules;
+
+        return $f;
+    }
+}
+
+if (! function_exists('fb_fields')) {
+    /**
+     * All normalized items (inputs + headings/dividers/html) visible in a pane.
+     * $fields limits it to a subset (e.g. one card of a multi-card form); default = $form['fields'].
+     */
+    function fb_fields(array $form, string $pane = 'edit', ?array $fields = null): array
+    {
+        $form = fb_defaults($form);
+        $out  = [];
+        foreach ($fields ?? (array) $form['fields'] as $f) {
+            $n = fb_field((array) $f, $form, $pane);
+            if ($n !== null) {
+                $out[] = $n;
+            }
+        }
+
+        return $out;
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// 3. Controls (edit/create mode)
+// ---------------------------------------------------------------------------------------------
+
+if (! function_exists('fb_control_attrs')) {
+    function fb_control_attrs(array $f, string $baseClass): array
+    {
+        $a     = $f['attrs'];
+        $extra = $a['class'] ?? '';
+        unset($a['class']);
+        $class = trim($baseClass . ' ' . (is_array($extra) ? implode(' ', $extra) : $extra));
+
+        return ['id' => $f['id'], 'name' => $f['input_name'], 'class' => $class] + $a;
+    }
+}
+
+if (! function_exists('fb_input')) {
+    /** <input> for text, email, password, number, range, date, time, color, hidden, ... */
+    function fb_input(array $f): string
+    {
+        $type  = $f['type'];
+        $attrs = ['type' => $type] + fb_control_attrs($f, $type === 'range' ? 'form-range' : 'form-control');
+        if ($type !== 'password' && $type !== 'file') {
+            $attrs['value'] = fb_input_value($f);
+        }
+
+        return '<input' . fb_attrs($attrs) . '>';
+    }
+}
+
+if (! function_exists('fb_textarea')) {
+    function fb_textarea(array $f): string
+    {
+        $attrs         = fb_control_attrs($f, 'form-control');
+        $attrs['rows'] = $attrs['rows'] ?? 3;
+
+        return '<textarea' . fb_attrs($attrs) . '>' . fb_esc(fb_input_value($f)) . '</textarea>';
+    }
+}
+
+if (! function_exists('fb_select')) {
+    function fb_select(array $f): string
+    {
+        $attrs = fb_control_attrs($f, 'form-select');
+        $ph    = array_key_exists('placeholder', $attrs) ? $attrs['placeholder'] : lang('Form.select');
+        unset($attrs['placeholder']);
+        if ($f['multiple']) {
+            $attrs['multiple'] = true;
+        }
+        $sel  = fb_values_array($f['value'], $f['multiple']);
+        $html = '<select' . fb_attrs($attrs) . '>';
+        if (! $f['multiple'] && $ph !== false && $ph !== null) {
+            $html .= '<option value=""' . ($sel === [] ? ' selected' : '') . '>' . fb_esc($ph) . '</option>';
+        }
+        foreach ($f['options'] as $o) {
+            $html .= '<option value="' . fb_esc($o['value'], 'attr') . '"'
+                . (in_array($o['value'], $sel, true) ? ' selected' : '')
+                . ($o['disabled'] ? ' disabled' : '') . '>' . fb_esc($o['label']) . '</option>';
+        }
+
+        return $html . '</select>';
+    }
+}
+
+if (! function_exists('fb_tel')) {
+    /**
+     * A telephone field: the country dropdown and the number as the user dials it, neither submitted, plus the
+     * hidden input of the field's name holding the E.164 number the script fills in (see TELEPHONE FIELDS)
+     */
+    function fb_tel(array $f): string
+    {
+        $a     = $f['attrs'];
+        $state = array_intersect_key($a, array_flip(['disabled', 'readonly']));
+        $data  = ['data-fb-tel' => $f['name']];
+
+        $select = ['id' => $f['id'] . '__country', 'class' => 'form-select flex-grow-0 w-auto', 'aria-label' => lang('Form.telephone-country'),
+            'data-fb-tel-part' => 'country'] + $data + $state;
+        // a readonly select can still be changed, so it is disabled instead (it is not submitted either way)
+        if (! empty($state['readonly'])) {
+            $select['disabled'] = true;
+        }
+        $html = '<div class="input-group"><select' . fb_attrs($select) . '>'
+            . '<option value=""' . ($f['tel_country'] === '' ? ' selected' : '') . '>' . fb_esc(lang('Form.select')) . '</option>';
+        foreach ($f['tel_codes'] as $country => $dial) {
+            $html .= '<option value="' . fb_esc($country, 'attr') . '"' . ($country === $f['tel_country'] ? ' selected' : '') . '>'
+                . fb_esc($country . ' ' . $dial) . '</option>';
+        }
+        $html .= '</select>';
+
+        $extra = $a['class'] ?? '';
+        unset($a['class'], $a['required'], $a['maxlength']);
+        $local = ['type' => 'tel', 'id' => $f['id'], 'class' => trim('form-control ' . (is_array($extra) ? implode(' ', $extra) : $extra)),
+            'value' => $f['tel_local'], 'autocomplete' => 'tel-national', 'data-fb-tel-part' => 'local'] + $data + $a;
+        $html .= '<input' . fb_attrs($local) . '></div>';
+
+        $value = fb_input_value($f);
+        return $html . '<input' . fb_attrs(['type' => 'hidden', 'id' => $f['id'] . '__e164', 'name' => $f['input_name'], 'value' => $value,
+            'data-fb-tel-initial' => $value, 'data-fb-tel-part' => 'value'] + $data + array_intersect_key($state, ['disabled' => true])) . '>';
+    }
+}
+
+if (! function_exists('fb_choice_group')) {
+    /** A group of radios or checkboxes. Submitted value = option value, shown text = option label. */
+    function fb_choice_group(array $f): string
+    {
+        $sel  = fb_values_array($f['value'], true);
+        $base = $f['attrs'];
+        $cls  = $base['class'] ?? '';
+        unset($base['class'], $base['id'], $base['name'], $base['type'], $base['value'], $base['placeholder']);
+        $html = '';
+        foreach ($f['options'] as $i => $o) {
+            $id    = $f['id'] . '_' . $i;
+            $attrs = [
+                    'class' => trim('form-check-input ' . (is_array($cls) ? implode(' ', $cls) : $cls)),
+                    'type'  => $f['type'],
+                    'id'    => $id,
+                    'name'  => $f['input_name'],
+                    'value' => $o['value'],
+                ] + $base;
+            $attrs = array_merge($attrs, $o['attrs']);
+            $attrs['checked'] = in_array($o['value'], $sel, true);
+            if ($o['disabled']) {
+                $attrs['disabled'] = true;
+            }
+            $html .= '<div class="form-check mb-2' . (! empty($f['inline']) ? ' form-check-inline' : '') . '">'
+                . '<input' . fb_attrs($attrs) . '>'
+                . '<label class="form-check-label" for="' . fb_esc($id, 'attr') . '">' . fb_esc($o['label']) . '</label></div>';
+        }
+
+        return $html;
+    }
+}
+
+if (! function_exists('fb_single_check')) {
+    /** One checkbox or a switch (boolean-like). Submits checked_value, or off_value when unchecked. */
+    function fb_single_check(array $f): string
+    {
+        $base = $f['attrs'];
+        $cls  = $base['class'] ?? '';
+        unset($base['class'], $base['id'], $base['name'], $base['type'], $base['value'], $base['placeholder']);
+        $attrs = [
+                'class' => trim('form-check-input ' . (is_array($cls) ? implode(' ', $cls) : $cls)),
+                'type'  => 'checkbox',
+                'id'    => $f['id'],
+                'name'  => $f['input_name'],
+                'value' => $f['checked_value'],
+            ] + $base;
+        $attrs['checked'] = $f['checked'];
+        $isSwitch = $f['type'] === 'switch';
+        if ($isSwitch) {
+            $attrs['role'] = 'switch';
+        }
+
+        return '<div class="form-check' . ($isSwitch ? ' form-switch mb-0' : ' mb-2') . '">'
+            . '<input' . fb_attrs($attrs) . '>'
+            . (! empty($f['text']) ? '<label class="form-check-label" for="' . fb_esc($f['id'], 'attr') . '">' . fb_esc($f['text']) . '</label>' : '')
+            . '</div>';
+    }
+}
+
+if (! function_exists('fb_control')) {
+    /** Dispatch to the right control for the field type. */
+    function fb_control(array $f): string
+    {
+        switch ($f['type']) {
+            case 'textarea':
+                return fb_textarea($f);
+            case 'select':
+                return fb_select($f);
+            case 'checkbox':
+            case 'radio':
+                return $f['group'] ? fb_choice_group($f) : ($f['single'] ? fb_single_check($f) : fb_input($f));
+            case 'switch':
+                return fb_single_check($f);
+            case 'tel':
+                return fb_tel($f);
+            default:
+                return fb_input($f);
+        }
+    }
+}
+
+if (! function_exists('fb_label')) {
+    function fb_label(array $f, array $form): string
+    {
+        $form  = fb_defaults($form);
+        $col   = $form['layout']['label_col'];
+        $for   = $f['group'] ? $f['id'] . '_0' : $f['id'];
+        $class = "col-sm-{$col} text-sm-end col-form-label" . (! empty($f['rules_client']['required']) ? ' required' : '');
+        $html  = '<label for="' . fb_esc($for, 'attr') . '" class="' . $class . '">' . fb_esc($f['label']);
+
+        if (! empty($f['badge'])) {
+            $b     = is_array($f['badge']) ? $f['badge'] : ['text' => $f['badge']];
+            $html .= ' <span class="badge ' . fb_esc($b['class'] ?? 'bg-primary', 'attr') . ' ms-1">' . fb_esc($b['text'] ?? '') . '</span>';
+        }
+        if (! empty($f['optional'])) {
+            $html .= ' <span class="form-label-optional">' . fb_esc(lang('Form.optional')) . '</span>';
+        }
+
+        return $html . '</label>';
+    }
+}
+
+if (! function_exists('fb_help')) {
+    function fb_help(array $f): string
+    {
+        return ! empty($f['help']) ? '<div class="form-text">' . fb_esc($f['help']) . '</div>' : '';
+    }
+}
+
+if (! function_exists('fb_error_slot')) {
+    /** Placeholder the generated JS fills with validation messages. */
+    function fb_error_slot(array $f): string
+    {
+        return '<div class="invalid-feedback" data-fb-error="' . fb_esc($f['name'], 'attr') . '"></div>';
+    }
+}
+
+if (! function_exists('fb_file_row')) {
+    /** A file input with its thumbnail box (label above, not in the label column), for upload forms. */
+    function fb_file_row(array $f): string
+    {
+        $img = $f['preview'] !== ''
+            ? '<img src="' . fb_esc($f['preview'], 'attr') . '" alt="" class="rounded-2" style="width: 64px; height: 64px; object-fit: cover;">'
+            : '';
+
+        return '<div class="mb-0' . (! empty($f['row_class']) ? ' ' . fb_esc($f['row_class'], 'attr') : '') . '" data-fb-row="' . fb_esc($f['name'], 'attr') . '">'
+            . '<label class="form-label' . (! empty($f['rules_client']['required']) ? ' required' : '') . '" for="' . fb_esc($f['id'], 'attr') . '">' . fb_esc($f['label']) . '</label>'
+            . '<div class="d-flex align-items-center gap-3">'
+            . '<div class="rounded-2 d-flex align-items-center justify-content-center" style="width: 64px; height: 64px;" data-fb-preview="' . fb_esc($f['name'], 'attr') . '">' . $img . '</div>'
+            . '<div class="flex-grow-1">' . fb_input($f) . fb_error_slot($f) . fb_help($f) . '</div>'
+            . '</div></div>';
+    }
+}
+
+if (! function_exists('fb_edit_row')) {
+    /** One full row (label + control + help + error slot) in create/edit mode. */
+    function fb_edit_row(array $f, array $form): string
+    {
+        if ($f['type'] === 'hidden') {
+            return fb_input($f);
+        }
+        if ($f['type'] === 'file') {
+            return fb_file_row($f);
+        }
+        $form    = fb_defaults($form);
+        $col     = 12 - $form['layout']['label_col'];
+        $padding = ($f['group'] || $f['single']) ? ' pt-2' : '';
+
+        return '<div class="row mb-3' . (! empty($f['row_class']) ? ' ' . fb_esc($f['row_class'], 'attr') : '') . '" data-fb-row="' . fb_esc($f['name'], 'attr') . '">'
+            . fb_label($f, $form)
+            . '<div class="col-sm-' . $col . $padding . '">'
+            . fb_control($f) . fb_error_slot($f) . fb_help($f)
+            . '</div></div>';
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// 4. View mode (read-only text; saved values are translated back to labels)
+// ---------------------------------------------------------------------------------------------
+
+if (! function_exists('fb_view_value')) {
+    function fb_view_value(array $f): string
+    {
+        $v     = $f['value'];
+        $empty = '<span class="text-muted">&mdash;</span>';
+
+        if (($f['view'] ?? null) instanceof \Closure) {
+            $text = (string) ($f['view'])($v, $f);
+
+            return $text === '' ? $empty : fb_esc($text);
+        }
+
+        if ($f['single']) {
+            $labels = (array) ($f['view_labels'] ?? []);
+            $on     = $labels['on'] ?? lang('Form.yes');
+            $off    = $labels['off'] ?? lang('Form.no');
+
+            return $f['checked']
+                ? '<span class="badge bg-success">' . fb_esc($on) . '</span>'
+                : '<span class="badge bg-secondary">' . fb_esc($off) . '</span>';
+        }
+
+        if ($f['options'] !== [] && in_array($f['type'], ['select', 'radio', 'checkbox'], true)) {
+            $map = array_column($f['options'], 'label', 'value');
+            $out = [];
+            foreach (fb_values_array($v, $f['multiple']) as $one) {
+                $out[] = fb_esc($map[$one] ?? $one);
+            }
+
+            return $out ? implode(', ', $out) : $empty;
+        }
+
+        if ($f['type'] === 'file') {
+            return $f['preview'] !== ''
+                ? '<img src="' . fb_esc($f['preview'], 'attr') . '" alt="" class="rounded-2" style="width: 64px; height: 64px; object-fit: cover;">'
+                : $empty;
+        }
+
+        $text = fb_input_value($f);
+        if ($f['type'] === 'password') {
+            return $text === '' && $v === null ? $empty : '&bull;&bull;&bull;&bull;&bull;&bull;&bull;&bull;';
+        }
+        if ($text === '') {
+            return $empty;
+        }
+        switch ($f['type']) {
+            case 'color':
+                $swatch = preg_match('/^#[0-9a-f]{3,8}$/i', $text) ? $text : 'transparent';
+
+                return '<span class="d-inline-block border rounded align-middle me-2" style="width:1.25rem;height:1.25rem;background:' . $swatch . '"></span>' . fb_esc($text);
+            case 'textarea':
+                return nl2br(fb_esc($text));
+            case 'tel':
+                return fb_esc(function_exists('formatPhoneNumber') ? formatPhoneNumber($text) : $text);
+            case 'date':
+                return fb_esc(function_exists('formatDate') ? (string) formatDate($text, $f['locale']) : $text);
+            case 'email':
+                return '<a href="mailto:' . fb_esc($text, 'attr') . '">' . fb_esc($text) . '</a>';
+            case 'url':
+                return preg_match('#^https?://#i', $text)
+                    ? '<a href="' . fb_esc($text, 'attr') . '" target="_blank" rel="noopener">' . fb_esc($text) . '</a>'
+                    : fb_esc($text);
+        }
+
+        return fb_esc($text);
+    }
+}
+
+if (! function_exists('fb_view_row')) {
+    function fb_view_row(array $f, array $form): string
+    {
+        $form = fb_defaults($form);
+        $col  = $form['layout']['label_col'];
+
+        return '<div class="row mb-3" data-fb-view="' . fb_esc($f['name'], 'attr') . '">'
+            . '<div class="col-sm-' . $col . ' text-sm-end">' . fb_esc($f['label']) . '</div>'
+            . '<div class="col-sm-' . (12 - $col) . '">' . fb_view_value($f) . '</div></div>';
+    }
+}
+
+// ---------------------------------------------------------------------------------------------
+// 5. Panes, buttons, card, script
+// ---------------------------------------------------------------------------------------------
+
+if (! function_exists('fb_rows')) {
+    /**
+     * All rows of a pane ('edit' or 'view'), including headings / dividers / raw html.
+     * $fields renders only that subset; it must also be in $form['fields'] so fb_script() validates it.
+     */
+    function fb_rows(array $form, string $pane = 'edit', ?array $fields = null): string
+    {
+        $form = fb_defaults($form);
+        $col  = $form['layout']['label_col'];
+        $html = '';
+        foreach (fb_fields($form, $pane, $fields) as $f) {
+            switch ($f['type']) {
+                case 'heading':
+                    $html .= '<div class="row mb-2 mt-4"><div class="col-sm-' . (12 - $col) . ' offset-sm-' . $col . '"><h6 class="text-uppercase text-muted mb-0">'
+                        . fb_esc($f['label'] ?? '') . '</h6></div></div>';
+                    break;
+                case 'divider':
+                    $html .= '<hr/>';
+                    break;
+                case 'html':
+                    $html .= (string) ($f['html'] ?? '');
+                    break;
+                default:
+                    $html .= $pane === 'view' ? fb_view_row($f, $form) : fb_edit_row($f, $form);
+            }
+        }
+
+        return $html;
+    }
+}
+
+if (! function_exists('fb_buttons_edit')) {
+    function fb_buttons_edit(array $form): string
+    {
+        $form = fb_defaults($form);
+        $l    = $form['labels'];
+        $html = '<hr /><div class="row"><div class="col-6">'
+            . '<button type="reset" class="btn btn-outline-secondary ms-2"><i class="bi bi-arrow-counterclockwise"></i> ' . fb_esc($l['reset']) . '</button>';
+        if ($form['upload'] && $form['deletable']) {
+            $stored = (bool) array_filter(fb_fields($form, 'edit'), static fn ($f) => $f['type'] === 'file' && $f['stored']);
+            $html  .= '<button type="button" class="btn btn-outline-danger btn-delete ms-2' . ($stored ? '' : ' d-none') . '" data-fb-action="delete"><i class="bi bi-trash"></i> ' . fb_esc($l['delete']) . '</button>';
+        }
+        $html .= '</div><div class="col-6 text-end">';
+        if ($form['mode'] === 'view') {
+            $html .= '<button type="button" class="btn btn-outline-secondary me-2" data-fb-action="cancel">' . fb_esc($l['cancel']) . '</button>';
+        }
+
+        return $html . '<button type="submit" class="btn btn-primary"><i class="bi bi-floppy"></i> ' . fb_esc($form['upload'] ? $l['upload'] : $l['save']) . '</button></div></div>';
+    }
+}
+
+if (! function_exists('fb_buttons_view')) {
+    function fb_buttons_view(array $form): string
+    {
+        $form = fb_defaults($form);
+        $l    = $form['labels'];
+        $html = '<hr /><div class="row"><div class="col-6">';
+        if ($form['deletable']) {
+            $html .= '<button type="button" class="btn btn-outline-danger btn-delete ms-2" data-fb-action="delete"><i class="bi bi-trash"></i> ' . fb_esc($l['delete']) . '</button>';
+        }
+        $html .= '</div><div class="col-6 text-end">';
+        if ($form['editable']) {
+            $html .= '<a class="btn btn-primary" href="' . fb_esc($form['urls']['edit'], 'attr') . '" data-fb-action="edit"><i class="bi bi-pencil-square"></i> ' . fb_esc($l['edit']) . '</a>';
+        }
+
+        return $html . '</div></div>';
+    }
+}
+
+if (! function_exists('fb_header')) {
+    /** Card header from the form title/subtitle; pass $title/$subtitle for the header of another card. */
+    function fb_header(array $form, ?string $title = null, ?string $subtitle = null): string
+    {
+        $form = fb_defaults($form);
+        $form['title']    = $title ?? $form['title'];
+        $form['subtitle'] = $subtitle ?? $form['subtitle'];
+
+        return '<div class="card-header"><h5 class="card-title">' . fb_esc($form['title']) . '</h5>'
+            . ($form['subtitle'] !== '' ? '<p class="card-subtitle">' . fb_esc($form['subtitle']) . '</p>' : '')
+            . '</div>';
+    }
+}
+
+if (! function_exists('fb_hidden_fields')) {
+    /** PK hidden input (id = id_prefix + id_field, "id" by default) + CSRF token. */
+    function fb_hidden_fields(array $form): string
+    {
+        $form = fb_defaults($form);
+        $html = '<input type="hidden" id="' . fb_esc($form['id_prefix'] . $form['id_field'], 'attr') . '" name="' . fb_esc($form['id_field'], 'attr') . '" value="' . fb_esc($form['id'], 'attr') . '" />';
+        if ($form['csrf']) {
+            $html .= '<input type="hidden" data-fb-csrf name="' . fb_esc($form['csrf']['name'], 'attr') . '" value="' . fb_esc($form['csrf']['hash'], 'attr') . '" />';
+        }
+
+        return $html;
+    }
+}
+
+if (! function_exists('fb_form_open')) {
+    function fb_form_open(array $form): string
+    {
+        $form = fb_defaults($form);
+
+        return '<form id="' . fb_esc($form['form_id'], 'attr') . '" method="post" action="' . fb_esc($form['urls']['submit'], 'attr')
+            . '"' . ($form['upload'] ? ' enctype="multipart/form-data"' : '') . ' novalidate data-fb-mode="' . $form['mode'] . '">';
+    }
+}
+
+if (! function_exists('fb_render')) {
+    /**
+     * MAIN FUNCTION. Renders the whole card (header + form with edit pane and/or view pane).
+     *
+     *   create : edit pane only
+     *   edit   : edit pane only
+     *   view   : view pane visible + edit pane hidden (the Edit button swaps them without reload)
+     */
+    function fb_render(array $form): string
+    {
+        $form = fb_defaults($form);
+        $html = '<div class="card" id="' . fb_esc($form['form_id'], 'attr') . '-card">' . fb_header($form)
+            . '<div class="card-body">' . fb_form_open($form) . fb_hidden_fields($form);
+
+        $showEdit = $form['mode'] !== 'view' || $form['editable'];
+        if ($showEdit) {
+            $html .= '<div data-fb-pane="edit"' . ($form['mode'] === 'view' ? ' class="d-none"' : '') . '>'
+                . fb_rows($form, 'edit') . fb_buttons_edit($form) . '</div>';
+        }
+        if ($form['mode'] === 'view') {
+            $html .= '<div data-fb-pane="view">' . fb_rows($form, 'view') . fb_buttons_view($form) . '</div>';
+        }
+
+        return $html . '</form></div></div>';
+    }
+}
+
+if (! function_exists('fb_script')) {
+    /**
+     * Generates the <script> that powers the form: live validation, submit (fetch + toastr),
+     * view/edit switching, delete confirmation, reset. Needs toastr (falls back to alert()).
+     * Echo it after fb_render(): <?= fb_script($formConfig) ?>
+     */
+    function fb_script(array $form): string
+    {
+        $form   = fb_defaults($form);
+        $fields = [];
+        foreach (fb_fields($form, 'edit') as $f) {
+            if (! fb_is_input($f) || $f['type'] === 'hidden') {
+                continue;
+            }
+            $fields[] = [
+                'name'         => $f['name'],
+                'inputName'    => $f['input_name'],
+                'type'         => $f['type'],
+                'label'        => $f['label'],
+                'group'        => $f['group'],
+                'single'       => $f['single'],
+                'multiple'     => $f['multiple'],
+                'offValue'     => $f['off_value'],
+                'optionValues' => array_column($f['options'], 'value'),
+                'rules'        => (object) $f['rules_client'],
+                'messages'     => (object) ($f['messages'] ?? []),
+            ] + ($f['type'] === 'file' ? [
+                'types'        => $f['types'],
+                'heic'         => $f['heic'],
+                'maxSize'      => $f['max_size'],
+                'maxSizeLabel' => $f['max_size_label'],
+                'defaultPreview' => $f['default_preview'],
+            ] : []);
+        }
+
+        $cfg = [
+            'formId'       => $form['form_id'],
+            'mode'         => $form['mode'],
+            'id'           => $form['id'],
+            'idField'      => $form['id_field'],
+            'method'       => $form['method'],
+            'deleteMethod' => strtoupper($form['delete_method']),
+            'urls'         => [
+                'submit'      => $form['urls']['submit'],
+                'delete'      => $form['urls']['delete'],
+                'list'        => $form['urls']['list'],
+                'afterSave'   => $form['urls']['after_save'],
+                'afterDelete' => $form['urls']['after_delete'],
+                'telephoneFormat' => $form['urls']['telephone_format'],
+            ],
+            'csrf'         => $form['csrf'] ? ['name' => $form['csrf']['name'], 'header' => $form['csrf']['header']] : null,
+            'messages'     => $form['messages'],
+            'labels'       => ['delete' => $form['labels']['delete'], 'keep' => $form['labels']['keep']],
+            'validation'   => lang('Form.validation'),
+            'upload'       => $form['upload'],
+            'heicDecoder'  => $form['heic_decoder'],
+            'fields'       => $fields,
+        ];
+
+        $json = json_encode($cfg, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        $js = <<<'JS'
+(function (cfg) {
+  'use strict';
+
+  var DATE_TYPES = ['date', 'datetime-local', 'time', 'month', 'week'];
+  var DEFAULT_MESSAGES = cfg.validation || {};
+
+  // ---- HEIC / HEIF: converted to WebP before upload, as the server only takes JPEG, PNG and WebP ----
+  var HEIC_MAX_SIDE = 2048; // phone photos are far larger than any use here; this keeps the result small
+  var scripts = {};
+
+  function isHeic(file) {
+    return /^image\/hei[cf](-sequence)?$/i.test(file.type) || /\.hei[cf]$/i.test(file.name);
+  }
+
+  function loadScript(src) {
+    if (!scripts[src]) {
+      scripts[src] = new Promise(function (resolve, reject) {
+        var s = document.createElement('script');
+        s.src = src;
+        s.onload = resolve;
+        s.onerror = function () { delete scripts[src]; reject(new Error('Could not load ' + src)); };
+        document.head.appendChild(s);
+      });
+    }
+    return scripts[src];
+  }
+
+  async function decodeHeic(file, decoderUrl) {
+    // browsers that read HEIC themselves (Safari) need no decoder
+    try { return await createImageBitmap(file); } catch (e) {}
+    await loadScript(decoderUrl);
+    var png = await window.heic2any({ blob: file, toType: 'image/png' });
+    return createImageBitmap(Array.isArray(png) ? png[0] : png);
+  }
+
+  function canvasBlob(canvas, type) {
+    return new Promise(function (resolve) { canvas.toBlob(resolve, type, 0.9); });
+  }
+
+  async function heicToWebp(file, decoderUrl) {
+    var bmp = await decodeHeic(file, decoderUrl);
+    var scale = Math.min(1, HEIC_MAX_SIDE / Math.max(bmp.width, bmp.height));
+    var canvas = document.createElement('canvas');
+    canvas.width = Math.round(bmp.width * scale);
+    canvas.height = Math.round(bmp.height * scale);
+    canvas.getContext('2d').drawImage(bmp, 0, 0, canvas.width, canvas.height);
+    if (bmp.close) { bmp.close(); }
+    var blob = await canvasBlob(canvas, 'image/webp');
+    // a browser that cannot encode WebP (Safari) returns a PNG instead; JPEG is much smaller then
+    if (!blob || blob.type !== 'image/webp') { blob = await canvasBlob(canvas, 'image/jpeg'); }
+    if (!blob) { throw new Error('The image could not be converted'); }
+    var ext = blob.type === 'image/webp' ? '.webp' : '.jpg';
+    return new File([blob], file.name.replace(/\.[^.]*$/, '') + ext, { type: blob.type });
+  }
+
+  function esc(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+    });
+  }
+
+  // Message must already be HTML-escaped by the caller.
+  function notify(type, html, title) {
+    if (window.toastr && typeof window.toastr[type] === 'function') {
+      try {
+        window.toastr[type](html, title || '', { timeOut: 5000, extendedTimeOut: 2000, closeButton: true, progressBar: true, escapeHtml: false });
+        return;
+      } catch (e) {
+        if (window.console) { console.warn('toastr failed (is jQuery loaded before toastr?)', e); }
+      }
+    }
+    if (type === 'error') {
+      window.alert((title ? title + '\n' : '') + String(html).replace(/<br\s*\/?>/g, '\n'));
+    } else if (window.console) {
+      console.log('[' + type + '] ' + html);
+    }
+  }
+
+  function init() {
+    var form = document.getElementById(cfg.formId);
+    if (!form) { return; }
+
+    var fields = {};
+    cfg.fields.forEach(function (f) { fields[f.name] = f; });
+    var busy = false;
+    var mode = cfg.mode === 'view' ? 'view' : 'edit';
+    // file fields: the file to send (after any HEIC conversion), its pending conversion, and the saved thumbnail
+    var prepared = {};
+    var preparing = {};
+    var previews = {};
+    form.querySelectorAll('[data-fb-preview]').forEach(function (box) {
+      var img = box.querySelector('img');
+      previews[box.getAttribute('data-fb-preview')] = img ? img.getAttribute('src') : '';
+    });
+
+    function els(f) {
+      return Array.prototype.slice.call(form.querySelectorAll('[name="' + CSS.escape(f.inputName) + '"]'));
+    }
+
+    function fieldOf(target) {
+      if (!target || !target.name) { return null; }
+      return fields[target.name.replace(/\[\]$/, '')] || null;
+    }
+
+    // ---- telephone fields: country + number -> the hidden E.164 value -----------------------
+    function telParts(f) {
+      var part = function (p) { return form.querySelector('[data-fb-tel="' + CSS.escape(f.name) + '"][data-fb-tel-part="' + p + '"]'); };
+      return { country: part('country'), local: part('local'), value: part('value') };
+    }
+
+    function telFields() {
+      return cfg.fields.filter(function (f) { return f.type === 'tel'; });
+    }
+
+    // what the hidden value was last worked out from, so it is only asked for again when either part changes
+    var telFormatted = {};
+    var telSeq = {};
+
+    function telKey(t) { return t.country.value + '|' + t.local.value.trim(); }
+
+    async function formatTel(f) {
+      var t = telParts(f);
+      if (!t.local || !t.value || t.local.disabled) { return; }
+      var key = telKey(t);
+      if (telFormatted[f.name] === key) { return; }
+      var seq = telSeq[f.name] = (telSeq[f.name] || 0) + 1;
+      var local = t.local.value.trim();
+      var e164 = '';
+      if (local !== '' && t.country.value !== '') {
+        var body = new FormData();
+        body.set('country-code', t.country.value);
+        body.set('telephone-number', local);
+        try {
+          var r = await send(cfg.urls.telephoneFormat, body);
+          if (r.ok && r.data.data && r.data.data.e164) { e164 = r.data.data.e164; }
+        } catch (err) { e164 = ''; }
+      }
+      if (seq !== telSeq[f.name]) { return; } // a newer change is on its way
+      t.value.value = e164;
+      telFormatted[f.name] = key;
+    }
+
+    function telStale() {
+      telFields().forEach(function (f) {
+        var t = telParts(f);
+        if (t.local && !preparing[f.name] && telFormatted[f.name] !== telKey(t)) {
+          preparing[f.name] = formatTel(f).finally(function () { delete preparing[f.name]; });
+        }
+      });
+    }
+
+    // the saved number is already E.164: no need to ask for it until a part changes
+    telFields().forEach(function (f) {
+      var t = telParts(f);
+      if (t.local && t.value && t.value.value !== '') { telFormatted[f.name] = telKey(t); }
+    });
+
+    // the controls the user sees (and that turn red); for a telephone field not its hidden input
+    function uiEls(f) {
+      if (f.type !== 'tel') { return els(f); }
+      var t = telParts(f);
+      return [t.country, t.local].filter(Boolean);
+    }
+
+    // ---- reading values ----------------------------------------------------------------
+    function getValue(f) {
+      var list = els(f);
+      if (!list.length) { return ''; }
+      if (f.type === 'file') { return prepared[f.name] ? prepared[f.name].name : ''; }
+      if (f.single) { return list[0].checked ? list[0].value : ''; }
+      if (f.type === 'radio') {
+        var c = list.filter(function (e) { return e.checked; })[0];
+        return c ? c.value : '';
+      }
+      if (f.group) {
+        return list.filter(function (e) { return e.checked; }).map(function (e) { return e.value; });
+      }
+      if (f.type === 'select' && f.multiple) {
+        return Array.prototype.slice.call(list[0].selectedOptions).map(function (o) { return o.value; });
+      }
+      return list[0].value;
+    }
+
+    // ---- validation --------------------------------------------------------------------
+    function msg(f, rule, param) {
+      var t = (f.messages && f.messages[rule]) || DEFAULT_MESSAGES[rule] || DEFAULT_MESSAGES.invalid || '{label} is invalid.';
+      return t.replace(/\{label\}/g, function () { return f.label; })
+              .replace(/\{param\}/g, function () { return param === undefined ? '' : param; });
+    }
+
+    function validateField(f) {
+      var list = els(f);
+      if (!list.length || list[0].disabled) { return ''; }
+
+      var r = f.rules || {};
+      if (f.type === 'tel') {
+        var t = telParts(f);
+        if (!t.local || t.local.disabled) { return ''; }
+        if (t.local.value.trim() === '') { return r.required ? msg(f, 'required') : ''; }
+        if (!t.country.value) { return msg(f, 'phone_country'); }
+        return t.value.value === '' ? msg(f, 'phone') : '';
+      }
+      var v = getValue(f);
+      var multi = Array.isArray(v);
+      var empty = multi ? v.length === 0 : String(v).trim() === '';
+
+      if (r.required && empty) { return msg(f, 'required'); }
+      if (empty) { return ''; }
+      if (f.type === 'file') {
+        var file = prepared[f.name];
+        if (f.types.length && f.types.indexOf(file.type) === -1) { return msg(f, 'file_type'); }
+        if (f.maxSize && file.size > f.maxSize) { return msg(f, 'file_size', f.maxSizeLabel); }
+        return '';
+      }
+
+      // The submitted value must be one of the configured option values (labels are display-only).
+      var items = multi ? v : [v];
+      if (f.optionValues && f.optionValues.length && items.some(function (x) { return f.optionValues.indexOf(x) === -1; })) {
+        return msg(f, 'in_list');
+      }
+      if (multi || f.single) { return ''; }
+
+      var s = String(v).trim();
+      var n = Number(s);
+      var isDate = DATE_TYPES.indexOf(f.type) > -1;
+
+      if (r.minlength !== undefined && s.length < Number(r.minlength)) { return msg(f, 'minlength', r.minlength); }
+      if (r.maxlength !== undefined && s.length > Number(r.maxlength)) { return msg(f, 'maxlength', r.maxlength); }
+      if (r.numeric && isNaN(n)) { return msg(f, 'numeric'); }
+      if (r.integer && !/^[-+]?\d+$/.test(s)) { return msg(f, 'integer'); }
+      if (r.decimal && !/^[-+]?\d*\.\d+$/.test(s)) { return msg(f, 'decimal'); }
+      if (r.natural && !/^\d+$/.test(s)) { return msg(f, 'natural'); }
+      if (r.natural_nz && (!/^\d+$/.test(s) || Number(s) === 0)) { return msg(f, 'natural_nz'); }
+
+      if (r.min !== undefined && r.min !== '') {
+        if (isDate ? s < String(r.min) : (isNaN(n) || n < Number(r.min))) { return msg(f, 'min', r.min); }
+      }
+      if (r.max !== undefined && r.max !== '') {
+        if (isDate ? s > String(r.max) : (isNaN(n) || n > Number(r.max))) { return msg(f, 'max', r.max); }
+      }
+      if (r.gt !== undefined && (isNaN(n) || n <= Number(r.gt))) { return msg(f, 'gt', r.gt); }
+      if (r.lt !== undefined && (isNaN(n) || n >= Number(r.lt))) { return msg(f, 'lt', r.lt); }
+
+      if (r.step && r.step !== 'any' && (f.type === 'number' || f.type === 'range') && !isNaN(n)) {
+        var st = Number(r.step);
+        var base = (r.min !== undefined && r.min !== '') ? Number(r.min) : 0;
+        var q = (n - base) / st;
+        if (st > 0 && Math.abs(q - Math.round(q)) > 1e-7) { return msg(f, 'step', r.step); }
+      }
+
+      if (r.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s)) { return msg(f, 'email'); }
+      if (r.url) { try { new URL(s); } catch (e) { return msg(f, 'url'); } }
+      if (r.date && isNaN(Date.parse(s))) { return msg(f, 'date'); }
+      if (r.alpha && !/^[A-Za-z]+$/.test(s)) { return msg(f, 'alpha'); }
+      if (r.alpha_numeric && !/^[A-Za-z0-9]+$/.test(s)) { return msg(f, 'alpha_numeric'); }
+      if (r.alpha_dash && !/^[A-Za-z0-9_-]+$/.test(s)) { return msg(f, 'alpha_dash'); }
+      if (r.pattern) { try { if (!new RegExp('^(?:' + r.pattern + ')$').test(s)) { return msg(f, 'pattern'); } } catch (e) {} }
+      if (r.regex) { try { if (!new RegExp(r.regex.source, r.regex.flags).test(s)) { return msg(f, 'regex'); } } catch (e) {} }
+      if (r.in_list && r.in_list.indexOf(s) === -1) { return msg(f, 'in_list'); }
+      if (r.matches) {
+        var other = fields[r.matches];
+        if (other && getValue(other) !== v) { return msg(f, 'matches', other.label); }
+      }
+      return '';
+    }
+
+    function showError(f, text) {
+      uiEls(f).forEach(function (e) { e.classList.toggle('is-invalid', !!text); });
+      var slot = form.querySelector('[data-fb-error="' + CSS.escape(f.name) + '"]');
+      if (slot) {
+        slot.textContent = text || '';
+        slot.style.display = text ? 'block' : '';
+      }
+    }
+
+    function clearErrors() {
+      cfg.fields.forEach(function (f) { showError(f, ''); });
+    }
+
+    function validateAll() {
+      var errors = [];
+      cfg.fields.forEach(function (f) {
+        var m = validateField(f);
+        showError(f, m);
+        if (m) { errors.push({ field: f, message: m }); }
+      });
+      return errors;
+    }
+
+    // ---- requests ----------------------------------------------------------------------
+    function csrfInput() { return form.querySelector('[data-fb-csrf]'); }
+
+    function updateCsrf(hash) {
+      var el = csrfInput();
+      if (el && hash) { el.value = hash; }
+    }
+
+    async function send(url, body) {
+      var headers = { 'X-Requested-With': 'XMLHttpRequest', 'Accept': 'application/json' };
+      if (cfg.csrf && csrfInput()) { headers[cfg.csrf.header] = csrfInput().value; }
+      var res = await fetch(url, { method: 'POST', body: body, headers: headers, credentials: 'same-origin' });
+      var data = {};
+      try { data = await res.json(); } catch (e) { data = {}; }
+      if (data && data.csrf_hash) { updateCsrf(data.csrf_hash); }
+      else if (cfg.csrf) { updateCsrf(res.headers.get(cfg.csrf.header)); }
+      return { ok: res.ok && data.success !== false, status: res.status, data: data || {} };
+    }
+
+    function setBusy(on) {
+      busy = on;
+      form.querySelectorAll('[type="submit"], [data-fb-action]').forEach(function (b) {
+        if (on) { b.setAttribute('disabled', 'disabled'); b.classList.add('disabled'); }
+        else { b.removeAttribute('disabled'); b.classList.remove('disabled'); }
+      });
+    }
+
+    function applyServerErrors(errors) {
+      var out = [];
+      Object.keys(errors || {}).forEach(function (k) {
+        out.push(errors[k]);
+        var f = fields[k.replace(/\.\*$/, '')];
+        if (f) { showError(f, errors[k]); }
+      });
+      return out;
+    }
+
+    // ---- file fields ---------------------------------------------------------------------
+    function setPreview(f, src) {
+      var box = form.querySelector('[data-fb-preview="' + CSS.escape(f.name) + '"]');
+      if (!box) { return; }
+      var img = box.querySelector('img');
+      if (!src) { if (img) { img.remove(); } return; }
+      if (!img) {
+        img = document.createElement('img');
+        img.alt = '';
+        img.className = 'rounded-2';
+        img.style.cssText = 'width: 64px; height: 64px; object-fit: cover;';
+        box.appendChild(img);
+      }
+      img.src = src;
+    }
+
+    // keeps the picked file ready to send: HEIC/HEIF is converted first, and the thumbnail shows the result
+    async function prepareFile(f) {
+      var input = els(f)[0];
+      var file = input && input.files && input.files[0];
+      delete prepared[f.name];
+      if (!file) { setPreview(f, previews[f.name]); return; }
+      if (f.heic && isHeic(file)) {
+        notify('info', esc(cfg.messages.converting));
+        try {
+          file = await heicToWebp(file, cfg.heicDecoder);
+        } catch (err) {
+          if (window.console) { console.warn('HEIC conversion failed', err); }
+          input.value = '';
+          setPreview(f, previews[f.name]);
+          throw new Error(cfg.messages.convertFailed);
+        }
+      }
+      prepared[f.name] = file;
+      setPreview(f, /^image\//.test(file.type) ? URL.createObjectURL(file) : previews[f.name]);
+    }
+
+    function fileFields() {
+      return cfg.fields.filter(function (f) { return f.type === 'file'; });
+    }
+
+    // ---- mode switching ----------------------------------------------------------------
+    function setMode(next) {
+      var editPane = form.querySelector('[data-fb-pane="edit"]');
+      var viewPane = form.querySelector('[data-fb-pane="view"]');
+      mode = next;
+      if (editPane) { editPane.classList.toggle('d-none', next !== 'edit'); }
+      if (viewPane) { viewPane.classList.toggle('d-none', next === 'edit'); }
+      form.setAttribute('data-fb-mode', next);
+      if (next === 'edit' && editPane) {
+        var first = editPane.querySelector('input:not([type="hidden"]):not([disabled]):not([readonly]), select:not([disabled]), textarea:not([disabled]):not([readonly])');
+        if (first) { first.focus(); }
+      }
+    }
+
+    // ---- 1. validate on change ---------------------------------------------------------
+    form.addEventListener('change', async function (e) {
+      var f = fieldOf(e.target);
+      if (!f || mode !== 'edit') { return; }
+      if (f.type === 'file') {
+        preparing[f.name] = prepareFile(f);
+        try { await preparing[f.name]; } catch (err) { showError(f, err.message); notify('error', esc(err.message)); return; }
+        finally { delete preparing[f.name]; }
+      }
+      var m = validateField(f);
+      showError(f, m);
+      if (m) { notify('error', esc(m)); }
+    });
+    // a telephone part changed: work out the E.164 value, then check it
+    form.addEventListener('change', async function (e) {
+      var name = e.target && e.target.getAttribute && e.target.getAttribute('data-fb-tel');
+      var f = name ? fields[name] : null;
+      if (!f || mode !== 'edit' || e.target.getAttribute('data-fb-tel-part') === 'value') { return; }
+      var job = preparing[f.name] = formatTel(f);
+      try { await job; } finally { if (preparing[f.name] === job) { delete preparing[f.name]; } }
+      var m = validateField(f);
+      showError(f, m);
+      if (m) { notify('error', esc(m)); }
+    });
+    // clear the red state as soon as the user fixes the value (silent)
+    form.addEventListener('input', function (e) {
+      var f = fieldOf(e.target);
+      if (f && e.target.classList.contains('is-invalid')) { showError(f, validateField(f)); }
+    });
+
+    // ---- 2. submit ---------------------------------------------------------------------
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+      if (busy) { return; }
+
+      // a HEIC conversion or a telephone number still being formatted is waited for, so the result is what is sent
+      telStale();
+      try { await Promise.all(Object.keys(preparing).map(function (k) { return preparing[k]; })); } catch (err) { return; }
+      var errors = validateAll();
+      if (errors.length) {
+        notify('error', errors.map(function (x) { return esc(x.message); }).join('<br>'), cfg.messages.fixErrors);
+        var firstEl = els(errors[0].field)[0];
+        if (firstEl && firstEl.focus) { firstEl.focus(); }
+        return;
+      }
+
+      var body = new FormData(form);
+      cfg.fields.forEach(function (f) {
+        if (f.single) {
+          var el = els(f)[0];
+          if (el && !el.disabled && !el.checked) { body.set(f.inputName, f.offValue); }
+        }
+      });
+      fileFields().forEach(function (f) {
+        if (prepared[f.name]) { body.set(f.inputName, prepared[f.name], prepared[f.name].name); }
+      });
+      if (cfg.method !== 'POST') { body.set('_method', cfg.method); }
+
+      setBusy(true);
+      try {
+        var r = await send(cfg.urls.submit || form.getAttribute('action') || window.location.href, body);
+        if (r.ok && cfg.upload) {
+          // the page stays: the thumbnail becomes the saved image and the input is emptied for the next one
+          notify('success', esc(r.data.message || cfg.messages.uploaded));
+          fileFields().forEach(function (f) {
+            if (prepared[f.name]) { previews[f.name] = r.data.url || previews[f.name]; }
+          });
+          showDelete(true);
+          form.reset();
+          form.dispatchEvent(new CustomEvent('fb:saved', { bubbles: true, detail: r.data }));
+          if (r.data.redirect || cfg.urls.afterSave) {
+            setTimeout(function () { window.location.href = r.data.redirect || cfg.urls.afterSave; }, 800);
+          }
+        } else if (r.ok) {
+          notify('success', esc(r.data.message || cfg.messages.saved));
+          form.dispatchEvent(new CustomEvent('fb:saved', { bubbles: true, detail: r.data }));
+          var to = r.data.redirect || cfg.urls.afterSave;
+          setTimeout(function () {
+            if (to) { window.location.href = to; }
+            else if (cfg.mode === 'create') { form.reset(); clearErrors(); }
+            else { window.location.reload(); }
+          }, 800);
+        } else {
+          var list = r.data.errors ? applyServerErrors(r.data.errors) : [];
+          if (!list.length) { list = [r.data.message || (cfg.upload ? cfg.messages.uploadFailed : cfg.messages.saveFailed)]; }
+          notify('error', list.map(esc).join('<br>'), r.data.errors ? cfg.messages.fixErrors : '');
+        }
+      } catch (err) {
+        notify('error', esc(cfg.upload ? cfg.messages.uploadFailed : cfg.messages.saveFailed));
+      } finally {
+        setBusy(false);
+      }
+    });
+
+    // ---- 3. delete ---------------------------------------------------------------------
+    function showDelete(on) {
+      var btn = form.querySelector('[data-fb-action="delete"]');
+      if (btn) { btn.classList.toggle('d-none', !on); }
+    }
+
+    async function confirmDelete() {
+      var question = cfg.upload ? cfg.messages.confirmDeleteImage : cfg.messages.confirmDelete;
+      if (window.Swal && typeof window.Swal.fire === 'function') {
+        var res = await window.Swal.fire({
+          title: question,
+          icon: 'warning',
+          color: '#994202',
+          customClass: {
+            title: 'card-title',
+            confirmButton: 'btn btn-danger',
+            cancelButton: 'btn btn-outline-secondary',
+          },
+          showCancelButton: true,
+          showConfirmButton: true,
+          cancelButtonText: cfg.labels.keep,
+          confirmButtonText: cfg.labels.delete,
+        });
+        return !!res.isConfirmed;
+      }
+      return window.confirm(question);
+    }
+
+    async function doDelete() {
+      if (busy || !cfg.urls.delete || !(await confirmDelete())) { return; }
+      var body = new FormData();
+      if (cfg.upload) {
+        // the image is named by the form's hidden fields (used-for, the id field, ...) and the CSRF token among them
+        form.querySelectorAll('input[type="hidden"][name]').forEach(function (e) { body.set(e.name, e.value); });
+      } else {
+        body.append(cfg.idField, cfg.id);
+        if (cfg.csrf && csrfInput()) { body.append(cfg.csrf.name, csrfInput().value); }
+      }
+      if (cfg.deleteMethod !== 'POST') { body.append('_method', cfg.deleteMethod); }
+      setBusy(true);
+      try {
+        var r = await send(cfg.urls.delete, body);
+        if (r.ok && cfg.upload) {
+          // the page stays: the thumbnail falls back to the default image until the next upload
+          notify('success', esc(r.data.message || cfg.messages.deleted));
+          fileFields().forEach(function (f) { previews[f.name] = r.data.url || f.defaultPreview; });
+          showDelete(false);
+          form.reset();
+          form.dispatchEvent(new CustomEvent('fb:deleted', { bubbles: true, detail: r.data }));
+          if (r.data.redirect || cfg.urls.afterDelete) {
+            setTimeout(function () { window.location.href = r.data.redirect || cfg.urls.afterDelete; }, 800);
+          }
+        } else if (r.ok) {
+          notify('success', esc(r.data.message || cfg.messages.deleted));
+          form.dispatchEvent(new CustomEvent('fb:deleted', { bubbles: true, detail: r.data }));
+          var to = r.data.redirect || cfg.urls.afterDelete || cfg.urls.list;
+          setTimeout(function () { if (to) { window.location.href = to; } else { window.history.back(); } }, 800);
+        } else {
+          notify('error', esc(r.data.message || cfg.messages.deleteFailed));
+        }
+      } catch (err) {
+        notify('error', esc(cfg.messages.deleteFailed));
+      } finally {
+        setBusy(false);
+      }
+    }
+
+    // ---- 4. edit / cancel / delete buttons ---------------------------------------------
+    form.addEventListener('click', function (e) {
+      var btn = e.target.closest('[data-fb-action]');
+      if (!btn || !form.contains(btn)) { return; }
+      var action = btn.getAttribute('data-fb-action');
+      e.preventDefault();
+      if (action === 'edit') { setMode('edit'); }
+      else if (action === 'cancel') { form.reset(); clearErrors(); setMode('view'); }
+      else if (action === 'delete') { doDelete(); }
+    });
+
+    // ---- 5. reset: restore the original values (native reset uses the rendered defaults) ----
+    form.addEventListener('reset', function () {
+      fileFields().forEach(function (f) { delete prepared[f.name]; setPreview(f, previews[f.name]); });
+      // a hidden input keeps what the script set, so the telephone values are put back by hand
+      setTimeout(function () {
+        telFields().forEach(function (f) {
+          var t = telParts(f);
+          if (!t.value) { return; }
+          t.value.value = t.value.getAttribute('data-fb-tel-initial') || '';
+          telSeq[f.name] = (telSeq[f.name] || 0) + 1;
+          if (t.value.value !== '' && t.local) { telFormatted[f.name] = telKey(t); } else { delete telFormatted[f.name]; }
+        });
+      }, 0);
+      setTimeout(clearErrors, 0);
+    });
+
+    // Public handle, e.g. window.FormBuilder['fb-form'].validateAll()
+    window.FormBuilder = window.FormBuilder || {};
+    window.FormBuilder[cfg.formId] = { form: form, setMode: setMode, validateField: validateField, validateAll: validateAll };
+  }
+
+  if (document.readyState === 'loading') { document.addEventListener('DOMContentLoaded', init); }
+  else { init(); }
+})(__FB_CONFIG__);
+JS;
+
+        return '<script>' . "\n" . str_replace('__FB_CONFIG__', $json, $js) . "\n" . '</script>';
+    }
+}
