@@ -1,0 +1,5 @@
+:root {
+    --default-font: "Noto Serif Thai",  system-ui, -apple-system, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+    --heading-font: "Prompt",  sans-serif;
+    --nav-font: "Prompt",  sans-serif;
+}

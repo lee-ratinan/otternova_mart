@@ -6,6 +6,10 @@ class Home extends BaseController
 {
     public function index(): string
     {
-        return view('welcome_message');
+        $locale = $this->request->getLocale();
+        $data   = [
+            'locale' => $locale,
+        ];
+        return view('home', $data);
     }
 }
