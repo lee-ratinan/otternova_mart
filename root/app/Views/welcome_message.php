@@ -40,30 +40,6 @@
 
 <header id="header" class="header position-relative">
 
-    <!-- Top Utility Bar -->
-    <div class="utility-bar">
-        <div class="container-fluid container-xl">
-            <div class="row align-items-center">
-                <div class="col-auto">
-                    <div class="utility-links">
-                        <a href="store-locator.html" class="utility-link">
-                            <i class="bi bi-pin-map"></i>
-                            <span>Find a Store</span>
-                        </a>
-                        <span class="utility-divider"></span>
-                        <a href="help.html" class="utility-link">
-                            <i class="bi bi-headset"></i>
-                            <span>Support</span>
-                        </a>
-                    </div>
-                </div>
-                <div class="col text-end">
-                    <span class="promo-text">Free delivery on orders over $75</span>
-                </div>
-            </div>
-        </div>
-    </div>
-
     <!-- Main Header -->
     <div class="main-bar">
         <div class="container-fluid container-xl">
