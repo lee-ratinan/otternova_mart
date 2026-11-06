@@ -1,0 +1,512 @@
+// main: ../main.scss
+/*--------------------------------------------------------------
+# Cart Section
+--------------------------------------------------------------*/
+.cart {
+  .cart-table {
+    border: 1px solid color-mix(in srgb, var(--default-color), transparent 88%);
+    border-radius: 8px;
+    overflow: hidden;
+    background-color: var(--surface-color);
+  }
+
+  .table-head {
+    padding: 12px 24px;
+    padding-right: 56px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: color-mix(in srgb, var(--default-color), transparent 40%);
+    border-bottom: 1px solid color-mix(in srgb, var(--default-color), transparent 90%);
+    background-color: color-mix(in srgb, var(--default-color), transparent 97%);
+  }
+
+  .cart-item {
+    position: relative;
+    padding: 20px 24px;
+    padding-right: 56px;
+    border-bottom: 1px solid color-mix(in srgb, var(--default-color), transparent 92%);
+    transition: background-color 0.2s ease;
+
+    &:last-child {
+      border-bottom: none;
+    }
+
+    &:hover {
+      background-color: color-mix(in srgb, var(--default-color), transparent 98%);
+    }
+
+    .remove-btn {
+      position: absolute;
+      top: 50%;
+      right: 16px;
+      transform: translateY(-50%);
+      width: 32px;
+      height: 32px;
+      border-radius: 6px;
+      border: none;
+      background: transparent;
+      color: color-mix(in srgb, var(--default-color), transparent 60%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background-color: color-mix(in srgb, #dc3545, transparent 90%);
+        color: #dc3545;
+      }
+
+      &:focus {
+        outline: none;
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color), transparent 80%);
+      }
+    }
+
+    .product-img {
+      width: 72px;
+      height: 72px;
+      min-width: 72px;
+      border-radius: 8px;
+      background-color: color-mix(in srgb, var(--default-color), transparent 96%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px;
+      border: 1px solid color-mix(in srgb, var(--default-color), transparent 92%);
+
+      img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+      }
+    }
+
+    .product-meta {
+      .product-title {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--heading-color);
+        margin-bottom: 4px;
+        line-height: 1.3;
+      }
+
+      .product-tags {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 4px;
+
+        .tag-item {
+          font-size: 12px;
+          font-weight: 500;
+          color: color-mix(in srgb, var(--default-color), transparent 35%);
+        }
+      }
+
+      .discount-badge {
+        display: inline-flex;
+        align-items: center;
+        padding: 2px 10px;
+        font-size: 11px;
+        font-weight: 500;
+        border-radius: 12px;
+        background-color: color-mix(in srgb, #28a745, transparent 90%);
+        color: #28a745;
+        border: 1px solid color-mix(in srgb, #28a745, transparent 70%);
+      }
+    }
+
+    .price-col {
+      .current-price {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--heading-color);
+        display: block;
+      }
+
+      .original-price {
+        font-size: 12px;
+        text-decoration: line-through;
+        color: color-mix(in srgb, var(--default-color), transparent 55%);
+        display: block;
+      }
+    }
+
+    .quantity-selector {
+      display: inline-flex;
+      align-items: center;
+      border: 1px solid color-mix(in srgb, var(--default-color), transparent 82%);
+      border-radius: 6px;
+      overflow: hidden;
+
+      .quantity-btn {
+        width: 32px;
+        height: 32px;
+        border: none;
+        background: transparent;
+        color: var(--default-color);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 14px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+
+        &:hover {
+          background-color: color-mix(in srgb, var(--default-color), transparent 95%);
+        }
+
+        &:focus {
+          outline: none;
+          background-color: color-mix(in srgb, var(--accent-color), transparent 92%);
+        }
+      }
+
+      .quantity-input {
+        width: 36px;
+        height: 32px;
+        text-align: center;
+        border: none;
+        border-left: 1px solid color-mix(in srgb, var(--default-color), transparent 88%);
+        border-right: 1px solid color-mix(in srgb, var(--default-color), transparent 88%);
+        background: transparent;
+        font-size: 13px;
+        font-weight: 600;
+        color: var(--heading-color);
+
+        &:focus {
+          outline: none;
+        }
+
+        &::-webkit-inner-spin-button,
+        &::-webkit-outer-spin-button {
+          -webkit-appearance: none;
+          margin: 0;
+        }
+      }
+    }
+
+    .row-total {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--heading-color);
+    }
+
+    @media (max-width: 768px) {
+      padding-right: 48px;
+
+      .remove-btn {
+        top: 16px;
+        right: 8px;
+        transform: none;
+      }
+
+      .price-col,
+      .total-col {
+
+        .current-price,
+        .row-total {
+          font-size: 13px;
+        }
+      }
+    }
+  }
+
+  .cart-actions {
+    margin-top: 16px;
+    padding: 8px 0;
+
+    .action-link {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--accent-color);
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      text-decoration: none;
+      transition: color 0.2s ease;
+
+      i {
+        transition: transform 0.2s ease;
+      }
+
+      &:hover {
+        color: color-mix(in srgb, var(--accent-color), transparent 25%);
+
+        i {
+          transform: translateX(-3px);
+        }
+      }
+    }
+
+    .action-clear {
+      font-size: 13px;
+      font-weight: 500;
+      background: none;
+      border: 1px solid color-mix(in srgb, #dc3545, transparent 50%);
+      color: #dc3545;
+      padding: 6px 16px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background-color: #dc3545;
+        color: var(--contrast-color);
+        border-color: #dc3545;
+      }
+
+      &:focus {
+        outline: none;
+        box-shadow: 0 0 0 3px color-mix(in srgb, #dc3545, transparent 80%);
+      }
+    }
+  }
+
+  // Summary Card
+  .summary-card {
+    background-color: var(--surface-color);
+    border: 1px solid color-mix(in srgb, var(--default-color), transparent 88%);
+    border-radius: 8px;
+    overflow: hidden;
+    position: sticky;
+    top: 6.5rem;
+
+    .summary-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 16px 24px;
+      border-bottom: 1px solid color-mix(in srgb, var(--default-color), transparent 90%);
+
+      h5 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--heading-color);
+      }
+
+      .items-count {
+        font-size: 12px;
+        font-weight: 500;
+        padding: 2px 10px;
+        border-radius: 12px;
+        background-color: color-mix(in srgb, var(--accent-color), transparent 90%);
+        color: var(--accent-color);
+        border: 1px solid color-mix(in srgb, var(--accent-color), transparent 70%);
+      }
+    }
+
+    .summary-body {
+      padding: 24px;
+    }
+
+    .coupon-section {
+      margin-bottom: 24px;
+      padding-bottom: 24px;
+      border-bottom: 1px solid color-mix(in srgb, var(--default-color), transparent 92%);
+
+      .coupon-label {
+        display: block;
+        font-size: 13px;
+        font-weight: 500;
+        color: var(--heading-color);
+        margin-bottom: 8px;
+      }
+
+      .input-group {
+        .form-control {
+          height: 40px;
+          border-radius: 6px 0 0 6px;
+          border: 1px solid color-mix(in srgb, var(--default-color), transparent 75%);
+          font-size: 14px;
+          padding: 8px 12px;
+          color: var(--default-color);
+          background-color: var(--surface-color);
+
+          &:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color), transparent 90%);
+          }
+
+          &::placeholder {
+            color: color-mix(in srgb, var(--default-color), transparent 60%);
+          }
+        }
+
+        .coupon-btn {
+          border-radius: 0 6px 6px 0;
+          background-color: var(--accent-color);
+          color: var(--contrast-color);
+          border: 1px solid var(--accent-color);
+          font-size: 13px;
+          font-weight: 500;
+          padding: 8px 16px;
+          transition: background 0.2s ease;
+
+          &:hover {
+            background-color: color-mix(in srgb, var(--accent-color), #000 15%);
+          }
+
+          &:focus {
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color), transparent 80%);
+          }
+        }
+      }
+    }
+
+    .summary-lines {
+      margin-bottom: 16px;
+
+      .summary-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 8px 0;
+        font-size: 14px;
+
+        .label-text {
+          color: color-mix(in srgb, var(--default-color), transparent 30%);
+        }
+
+        .value-text {
+          font-weight: 600;
+          color: var(--heading-color);
+        }
+
+        &.discount-row {
+          .value-text {
+            color: #28a745;
+          }
+        }
+      }
+
+      .shipping-options {
+        padding: 8px 0 8px 4px;
+
+        .form-check {
+          margin-bottom: 6px;
+
+          .form-check-input {
+            &:checked {
+              background-color: var(--accent-color);
+              border-color: var(--accent-color);
+            }
+
+            &:focus {
+              box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color), transparent 80%);
+            }
+          }
+
+          .form-check-label {
+            font-size: 13px;
+            color: var(--default-color);
+          }
+        }
+      }
+    }
+
+    .summary-total {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 0;
+      margin-bottom: 16px;
+      border-top: 1px solid color-mix(in srgb, var(--default-color), transparent 85%);
+
+      span:first-child {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--heading-color);
+      }
+
+      .total-value {
+        font-size: 24px;
+        font-weight: 700;
+        color: var(--heading-color);
+        letter-spacing: -0.01em;
+      }
+    }
+
+    .proceed-btn {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      height: 44px;
+      background-color: var(--accent-color);
+      color: var(--contrast-color);
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      transition: background 0.2s ease;
+      margin-bottom: 20px;
+
+      i {
+        font-size: 14px;
+        transition: transform 0.2s ease;
+      }
+
+      &:hover {
+        background-color: color-mix(in srgb, var(--accent-color), #000 15%);
+        color: var(--contrast-color);
+
+        i {
+          transform: translateX(3px);
+        }
+      }
+
+      &:focus {
+        outline: none;
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color), transparent 80%);
+      }
+    }
+
+    .payment-info {
+      text-align: center;
+      padding-top: 16px;
+      border-top: 1px solid color-mix(in srgb, var(--default-color), transparent 92%);
+
+      .payment-label {
+        font-size: 11px;
+        font-weight: 500;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        color: color-mix(in srgb, var(--default-color), transparent 50%);
+        margin-bottom: 8px;
+        display: block;
+      }
+
+      .payment-icons {
+        display: flex;
+        justify-content: center;
+        gap: 16px;
+
+        i {
+          font-size: 20px;
+          color: color-mix(in srgb, var(--default-color), transparent 55%);
+          transition: color 0.2s ease;
+
+          &:hover {
+            color: var(--accent-color);
+          }
+        }
+      }
+    }
+  }
+
+  @media (max-width: 992px) {
+    .summary-card {
+      position: static;
+    }
+  }
+}

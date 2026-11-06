@@ -1,0 +1,633 @@
+// main: ../main.scss
+/*--------------------------------------------------------------
+# Checkout Section
+--------------------------------------------------------------*/
+.checkout {
+
+  // Step Indicator
+  .step-indicator {
+    gap: 0;
+
+    .step-pill {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 6px;
+      background-color: var(--surface-color);
+      border: 1px solid color-mix(in srgb, var(--default-color), transparent 88%);
+      transition: all 0.2s ease;
+
+      .step-num {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 13px;
+        font-weight: 600;
+        background-color: color-mix(in srgb, var(--default-color), transparent 90%);
+        color: color-mix(in srgb, var(--default-color), transparent 40%);
+        transition: all 0.2s ease;
+      }
+
+      .step-text {
+        font-size: 14px;
+        font-weight: 500;
+        color: color-mix(in srgb, var(--default-color), transparent 40%);
+        transition: color 0.2s ease;
+      }
+
+      &.active {
+        border-color: var(--accent-color);
+        background-color: color-mix(in srgb, var(--accent-color), transparent 95%);
+
+        .step-num {
+          background-color: var(--accent-color);
+          color: var(--contrast-color);
+        }
+
+        .step-text {
+          color: var(--accent-color);
+          font-weight: 600;
+        }
+      }
+    }
+
+    .step-connector {
+      width: 32px;
+      height: 1px;
+      background-color: color-mix(in srgb, var(--default-color), transparent 85%);
+      flex-shrink: 0;
+    }
+
+    @media (max-width: 768px) {
+      .step-text {
+        display: none;
+      }
+
+      .step-pill {
+        padding: 8px;
+      }
+
+      .step-connector {
+        width: 16px;
+      }
+    }
+  }
+
+  // Checkout Card (Form Container)
+  .checkout-card {
+    background-color: var(--surface-color);
+    border: 1px solid color-mix(in srgb, var(--default-color), transparent 88%);
+    border-radius: 8px;
+    padding: 32px;
+    box-shadow: 0 1px 3px color-mix(in srgb, var(--default-color), transparent 95%);
+
+    @media (max-width: 768px) {
+      padding: 20px;
+    }
+  }
+
+  // Section Divider
+  .section-divider {
+    border: none;
+    border-top: 1px solid color-mix(in srgb, var(--default-color), transparent 90%);
+    margin: 32px 0;
+  }
+
+  // Form Sections
+  .form-section {
+    .section-label {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 24px;
+
+      .label-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: color-mix(in srgb, var(--accent-color), transparent 92%);
+        color: var(--accent-color);
+        font-size: 1.1rem;
+        flex-shrink: 0;
+      }
+
+      h3 {
+        margin: 0;
+        font-size: 18px;
+        font-weight: 600;
+        color: var(--heading-color);
+        letter-spacing: -0.01em;
+      }
+
+      p {
+        margin: 2px 0 0;
+        font-size: 14px;
+        color: color-mix(in srgb, var(--default-color), transparent 40%);
+      }
+    }
+
+    .section-fields {
+      .field-group {
+        label {
+          display: block;
+          font-size: 14px;
+          font-weight: 500;
+          color: var(--heading-color);
+          margin-bottom: 6px;
+        }
+
+        .form-control,
+        .form-select {
+          height: 40px;
+          padding: 8px 12px;
+          border: 1px solid color-mix(in srgb, var(--default-color), transparent 75%);
+          border-radius: 6px;
+          font-size: 14px;
+          color: var(--default-color);
+          background-color: var(--surface-color);
+          transition: all 0.2s ease;
+
+          &:hover {
+            border-color: color-mix(in srgb, var(--default-color), transparent 60%);
+          }
+
+          &:focus {
+            outline: none;
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color), transparent 90%);
+          }
+
+          &::placeholder {
+            color: color-mix(in srgb, var(--default-color), transparent 60%);
+          }
+        }
+
+        .form-select {
+          background-position: right 12px center;
+          padding-right: 36px;
+        }
+
+        .input-with-icon {
+          position: relative;
+
+          .trailing-icons {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            display: flex;
+            gap: 6px;
+
+            i {
+              font-size: 1rem;
+              color: color-mix(in srgb, var(--default-color), transparent 55%);
+            }
+          }
+
+          .trailing-hint {
+            position: absolute;
+            right: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: color-mix(in srgb, var(--default-color), transparent 50%);
+            cursor: pointer;
+            transition: color 0.2s ease;
+
+            &:hover {
+              color: var(--accent-color);
+            }
+          }
+
+          input {
+            padding-right: 64px;
+          }
+        }
+      }
+
+      .form-check {
+        .form-check-input {
+          width: 16px;
+          height: 16px;
+          border: 1px solid color-mix(in srgb, var(--default-color), transparent 65%);
+          border-radius: 4px;
+          background-color: var(--surface-color);
+          cursor: pointer;
+
+          &:checked {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+          }
+
+          &:focus {
+            border-color: var(--accent-color);
+            box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color), transparent 90%);
+          }
+        }
+
+        .form-check-label {
+          font-size: 14px;
+          cursor: pointer;
+
+          a {
+            font-weight: 600;
+
+            &:hover {
+              text-decoration: underline;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Payment Method Tabs
+  .method-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+
+    .method-tab {
+      flex: 1;
+      cursor: pointer;
+
+      input[type="radio"] {
+        position: absolute;
+        opacity: 0;
+        width: 0;
+        height: 0;
+      }
+
+      .tab-inner {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        padding: 10px 16px;
+        border: 1px solid color-mix(in srgb, var(--default-color), transparent 80%);
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        color: color-mix(in srgb, var(--default-color), transparent 25%);
+        transition: all 0.2s ease;
+
+        i {
+          font-size: 1.1rem;
+        }
+      }
+
+      &.active .tab-inner,
+      input:checked+.tab-inner {
+        border-color: var(--accent-color);
+        background-color: color-mix(in srgb, var(--accent-color), transparent 95%);
+        color: var(--accent-color);
+      }
+
+      &:hover .tab-inner {
+        border-color: color-mix(in srgb, var(--accent-color), transparent 50%);
+      }
+    }
+
+    @media (max-width: 576px) {
+      flex-direction: column;
+    }
+  }
+
+  .method-content {
+    &.d-none {
+      display: none;
+    }
+
+    .alt-method-msg {
+      padding: 16px;
+      background-color: color-mix(in srgb, var(--accent-color), transparent 95%);
+      border: 1px solid color-mix(in srgb, var(--accent-color), transparent 85%);
+      border-radius: 6px;
+      font-size: 14px;
+      color: color-mix(in srgb, var(--default-color), transparent 15%);
+
+      i {
+        color: var(--accent-color);
+      }
+    }
+  }
+
+  // Confirm Area
+  .confirm-area {
+    .agree-check {
+      margin-bottom: 20px;
+
+      .form-check-label {
+        font-size: 13px;
+      }
+    }
+
+    .order-success {
+      padding: 12px 16px;
+      background-color: color-mix(in srgb, #22c55e, transparent 92%);
+      border: 1px solid color-mix(in srgb, #22c55e, transparent 80%);
+      border-radius: 6px;
+      color: #16a34a;
+      font-weight: 500;
+      font-size: 14px;
+      margin-bottom: 16px;
+      text-align: center;
+
+      &.d-none {
+        display: none;
+      }
+    }
+
+    .place-order-btn {
+      width: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 12px 24px;
+      font-size: 15px;
+      font-weight: 600;
+      border-radius: 6px;
+      background-color: var(--accent-color);
+      color: var(--contrast-color);
+      border: none;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background-color: color-mix(in srgb, var(--accent-color), #000 12%);
+        box-shadow: 0 4px 12px color-mix(in srgb, var(--accent-color), transparent 65%);
+      }
+
+      &:focus {
+        outline: none;
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color), transparent 80%);
+      }
+
+      &:active {
+        transform: scale(0.99);
+      }
+    }
+  }
+
+  // Order Summary Card
+  .order-summary-card {
+    background-color: var(--surface-color);
+    border: 1px solid color-mix(in srgb, var(--default-color), transparent 88%);
+    border-radius: 8px;
+    box-shadow: 0 1px 3px color-mix(in srgb, var(--default-color), transparent 95%);
+    position: sticky;
+    top: 100px;
+
+    .summary-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 24px;
+      border-bottom: 1px solid color-mix(in srgb, var(--default-color), transparent 90%);
+
+      h3 {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: var(--heading-color);
+      }
+
+      .item-count {
+        font-size: 13px;
+        font-weight: 500;
+        color: color-mix(in srgb, var(--default-color), transparent 40%);
+        padding: 2px 10px;
+        border-radius: 12px;
+        background-color: color-mix(in srgb, var(--default-color), transparent 93%);
+      }
+    }
+
+    .summary-products {
+      padding: 16px 24px;
+
+      .product-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 0;
+
+        &:not(:last-child) {
+          border-bottom: 1px solid color-mix(in srgb, var(--default-color), transparent 93%);
+        }
+
+        &:first-child {
+          padding-top: 0;
+        }
+
+        &:last-child {
+          padding-bottom: 0;
+        }
+
+        .product-img {
+          position: relative;
+          width: 56px;
+          height: 56px;
+          border-radius: 8px;
+          overflow: hidden;
+          flex-shrink: 0;
+          border: 1px solid color-mix(in srgb, var(--default-color), transparent 90%);
+
+          img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+          }
+
+          .qty-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            width: 20px;
+            height: 20px;
+            background-color: var(--accent-color);
+            color: var(--contrast-color);
+            border-radius: 50%;
+            font-size: 11px;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+        }
+
+        .product-detail {
+          flex: 1;
+          min-width: 0;
+
+          h5 {
+            font-size: 14px;
+            font-weight: 600;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+          }
+
+          .product-variant {
+            font-size: 12px;
+            color: color-mix(in srgb, var(--default-color), transparent 45%);
+          }
+        }
+
+        .product-price {
+          font-weight: 600;
+          font-size: 14px;
+          color: var(--heading-color);
+          flex-shrink: 0;
+        }
+      }
+    }
+
+    .promo-input {
+      padding: 0 24px 16px;
+
+      .input-group {
+        .form-control {
+          height: 40px;
+          border: 1px solid color-mix(in srgb, var(--default-color), transparent 80%);
+          border-right: none;
+          border-radius: 6px 0 0 6px;
+          padding: 8px 12px;
+          font-size: 14px;
+          background-color: var(--surface-color);
+          color: var(--default-color);
+
+          &:focus {
+            border-color: var(--accent-color);
+            box-shadow: none;
+            outline: none;
+          }
+
+          &::placeholder {
+            color: color-mix(in srgb, var(--default-color), transparent 60%);
+          }
+        }
+
+        .btn {
+          border: 1px solid color-mix(in srgb, var(--default-color), transparent 80%);
+          border-left: none;
+          border-radius: 0 6px 6px 0;
+          padding: 0 16px;
+          font-weight: 500;
+          font-size: 14px;
+          color: var(--accent-color);
+          background-color: var(--surface-color);
+          transition: all 0.2s ease;
+
+          &:hover {
+            background-color: var(--accent-color);
+            border-color: var(--accent-color);
+            color: var(--contrast-color);
+          }
+        }
+      }
+    }
+
+    .cost-breakdown {
+      padding: 0 24px 20px;
+
+      .cost-line {
+        padding: 6px 0;
+        font-size: 14px;
+        color: color-mix(in srgb, var(--default-color), transparent 20%);
+      }
+
+      .cost-total {
+        padding-top: 12px;
+        margin-top: 8px;
+        border-top: 1px solid color-mix(in srgb, var(--default-color), transparent 85%);
+        font-size: 16px;
+        font-weight: 700;
+        color: var(--heading-color);
+      }
+    }
+
+    .secure-info {
+      padding: 16px 24px;
+      border-top: 1px solid color-mix(in srgb, var(--default-color), transparent 92%);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      .secure-badge {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 13px;
+        font-weight: 500;
+        color: #16a34a;
+
+        i {
+          font-size: 1rem;
+        }
+      }
+
+      .payment-icons {
+        display: flex;
+        gap: 8px;
+
+        i {
+          font-size: 1.2rem;
+          color: color-mix(in srgb, var(--default-color), transparent 55%);
+        }
+      }
+    }
+
+    @media (max-width: 992px) {
+      position: relative;
+      top: 0;
+      margin-bottom: 24px;
+    }
+  }
+
+  // Modal Styling
+  .modal-content {
+    border-radius: 8px;
+    border: 1px solid color-mix(in srgb, var(--default-color), transparent 90%);
+    box-shadow: 0 10px 15px color-mix(in srgb, var(--default-color), transparent 90%);
+
+    .modal-header {
+      border-bottom-color: color-mix(in srgb, var(--default-color), transparent 90%);
+      padding: 16px 24px;
+
+      .modal-title {
+        font-size: 16px;
+        font-weight: 600;
+      }
+    }
+
+    .modal-body {
+      padding: 24px;
+      font-size: 14px;
+      line-height: 1.7;
+    }
+
+    .modal-footer {
+      border-top-color: color-mix(in srgb, var(--default-color), transparent 90%);
+      padding: 16px 24px;
+
+      .btn-primary {
+        background-color: var(--accent-color);
+        border-color: var(--accent-color);
+        border-radius: 6px;
+        font-size: 14px;
+        font-weight: 500;
+        padding: 8px 20px;
+
+        &:hover {
+          background-color: color-mix(in srgb, var(--accent-color), #000 12%);
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,277 @@
+// main: ../main.scss
+/*--------------------------------------------------------------
+# Register Section
+--------------------------------------------------------------*/
+.register {
+  padding: 80px 0;
+
+  .register-card {
+    background: var(--surface-color);
+    border: 1px solid color-mix(in srgb, var(--default-color), transparent 88%);
+    border-radius: 8px;
+    box-shadow: 0 1px 3px color-mix(in srgb, var(--default-color), transparent 92%);
+    padding: 48px 40px;
+
+    @media (max-width: 768px) {
+      padding: 32px 20px;
+    }
+  }
+
+  .card-heading {
+    margin-bottom: 32px;
+
+    h3 {
+      font-size: 28px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin-bottom: 8px;
+    }
+
+    p {
+      font-size: 15px;
+      color: color-mix(in srgb, var(--default-color), transparent 35%);
+      margin: 0;
+      line-height: 1.6;
+    }
+  }
+
+  .status-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 12px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--accent-color), transparent 90%);
+    color: var(--accent-color);
+    border: 1px solid color-mix(in srgb, var(--accent-color), transparent 70%);
+    margin-bottom: 16px;
+    letter-spacing: 0.02em;
+
+    i {
+      font-size: 12px;
+    }
+  }
+
+  .perks-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 32px;
+  }
+
+  .perk-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    color: color-mix(in srgb, var(--default-color), transparent 15%);
+    background: color-mix(in srgb, var(--default-color), transparent 95%);
+    border-radius: 6px;
+    border: 1px solid color-mix(in srgb, var(--default-color), transparent 90%);
+
+    i {
+      font-size: 14px;
+      color: var(--accent-color);
+    }
+  }
+
+  .social-auth {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+
+    .auth-btn {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      height: 40px;
+      border-radius: 6px;
+      border: 1px solid color-mix(in srgb, var(--default-color), transparent 85%);
+      background: var(--surface-color);
+      color: var(--default-color);
+      font-size: 14px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: all 0.2s ease;
+
+      i {
+        font-size: 16px;
+      }
+
+      &:hover {
+        border-color: color-mix(in srgb, var(--default-color), transparent 70%);
+        background: color-mix(in srgb, var(--default-color), transparent 96%);
+      }
+
+      &:focus {
+        outline: none;
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color), transparent 80%);
+      }
+    }
+
+    @media (max-width: 576px) {
+      .auth-btn span {
+        display: none;
+      }
+    }
+  }
+
+  .divider-line {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+
+    &::before,
+    &::after {
+      content: "";
+      flex: 1;
+      height: 1px;
+      background: color-mix(in srgb, var(--default-color), transparent 90%);
+    }
+
+    span {
+      font-size: 12px;
+      font-weight: 500;
+      color: color-mix(in srgb, var(--default-color), transparent 50%);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      white-space: nowrap;
+    }
+  }
+
+  .field-group {
+    margin-bottom: 0;
+
+    label {
+      display: block;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--heading-color);
+      margin-bottom: 8px;
+    }
+
+    .form-control,
+    .form-select {
+      height: 40px;
+      padding: 8px 12px;
+      border: 1px solid color-mix(in srgb, var(--default-color), transparent 75%);
+      border-radius: 6px;
+      background: var(--surface-color);
+      color: var(--default-color);
+      font-size: 14px;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+      &:focus {
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color), transparent 90%);
+      }
+
+      &::placeholder {
+        color: color-mix(in srgb, var(--default-color), transparent 60%);
+      }
+    }
+
+    .field-hint {
+      display: block;
+      font-size: 12px;
+      color: color-mix(in srgb, var(--default-color), transparent 45%);
+      margin-top: 4px;
+    }
+  }
+
+  .check-group {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+
+    .form-check {
+      padding-left: 1.75rem;
+
+      .form-check-input {
+        width: 16px;
+        height: 16px;
+        margin-left: -1.75rem;
+        margin-top: 0.2rem;
+        border: 1px solid color-mix(in srgb, var(--default-color), transparent 65%);
+        border-radius: 4px;
+        transition: all 0.2s ease;
+
+        &:checked {
+          background-color: var(--accent-color);
+          border-color: var(--accent-color);
+        }
+
+        &:focus {
+          border-color: var(--accent-color);
+          box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color), transparent 80%);
+        }
+      }
+
+      .form-check-label {
+        font-size: 13px;
+        color: color-mix(in srgb, var(--default-color), transparent 20%);
+        line-height: 1.5;
+
+        a {
+          color: var(--accent-color);
+          font-weight: 500;
+          text-decoration: none;
+
+          &:hover {
+            text-decoration: underline;
+          }
+        }
+      }
+    }
+  }
+
+  .btn-register {
+    height: 40px;
+    font-size: 14px;
+    font-weight: 500;
+    border: none;
+    border-radius: 6px;
+    background: var(--accent-color);
+    color: var(--contrast-color);
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+    margin-top: 8px;
+
+    &:hover {
+      background: color-mix(in srgb, var(--accent-color), #000 12%);
+      color: var(--contrast-color);
+    }
+
+    &:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color), transparent 80%);
+    }
+
+    &:active {
+      transform: scale(0.99);
+    }
+  }
+
+  .login-prompt {
+    font-size: 14px;
+    color: color-mix(in srgb, var(--default-color), transparent 35%);
+    margin: 8px 0 0;
+
+    a {
+      color: var(--accent-color);
+      font-weight: 500;
+      text-decoration: none;
+
+      &:hover {
+        text-decoration: underline;
+      }
+    }
+  }
+}

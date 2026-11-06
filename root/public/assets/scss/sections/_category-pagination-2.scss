@@ -1,0 +1,138 @@
+// main: ../main.scss
+/*--------------------------------------------------------------
+# Category Pagination 2 Section
+--------------------------------------------------------------*/
+.category-pagination-2 {
+  padding-top: 0;
+
+  .pagination-bar {
+    border-top: 1px solid color-mix(in srgb, var(--default-color), transparent 90%);
+    padding-top: 24px;
+  }
+
+  .results-summary {
+    margin: 0;
+    font-size: 14px;
+    color: color-mix(in srgb, var(--default-color), transparent 40%);
+
+    strong {
+      color: var(--default-color);
+      font-weight: 600;
+    }
+  }
+
+  .page-controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+  }
+
+  .page-numbers {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .page-ellipsis {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+    color: color-mix(in srgb, var(--default-color), transparent 50%);
+    user-select: none;
+    letter-spacing: 2px;
+  }
+
+  .page-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 8px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--default-color);
+    background-color: transparent;
+    border: 1px solid transparent;
+    text-decoration: none;
+    transition: all 0.2s ease;
+
+    &:hover:not(.active):not([aria-disabled="true"]) {
+      background-color: var(--surface-color);
+      border-color: color-mix(in srgb, var(--default-color), transparent 85%);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color), transparent 80%);
+    }
+
+    &.active {
+      background-color: var(--accent-color);
+      color: var(--contrast-color);
+      font-weight: 600;
+      border-color: var(--accent-color);
+    }
+
+    &[aria-disabled="true"] {
+      opacity: 0.4;
+      pointer-events: none;
+    }
+  }
+
+  .step-btn {
+    gap: 4px;
+    padding: 0 12px;
+    border: 1px solid color-mix(in srgb, var(--default-color), transparent 80%);
+    background-color: var(--surface-color);
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+
+    i {
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    span {
+      font-size: 14px;
+    }
+
+    &:hover:not([aria-disabled="true"]) {
+      background-color: color-mix(in srgb, var(--default-color), transparent 96%);
+      border-color: color-mix(in srgb, var(--default-color), transparent 70%);
+    }
+  }
+
+  @media (max-width: 576px) {
+    .page-controls {
+      justify-content: center;
+    }
+
+    .results-summary {
+      text-align: center;
+    }
+
+    .step-btn {
+      span {
+        display: none;
+      }
+
+      padding: 0 8px;
+    }
+
+    .page-btn {
+      min-width: 32px;
+      height: 32px;
+      font-size: 13px;
+    }
+
+    .page-ellipsis {
+      width: 28px;
+      height: 32px;
+    }
+  }
+}

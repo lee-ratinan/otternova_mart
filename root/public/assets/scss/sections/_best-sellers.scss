@@ -1,0 +1,265 @@
+// main: ../main.scss
+/*--------------------------------------------------------------
+# Best Sellers Section
+--------------------------------------------------------------*/
+.best-sellers {
+  .product-card {
+    background: var(--surface-color);
+    border: 1px solid color-mix(in srgb, var(--default-color), transparent 88%);
+    border-radius: 8px;
+    overflow: hidden;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    transition: all 0.2s ease;
+
+    &:hover {
+      border-color: color-mix(in srgb, var(--default-color), transparent 80%);
+      box-shadow: 0 4px 12px color-mix(in srgb, var(--default-color), transparent 90%);
+
+      .product-media img {
+        transform: scale(1.03);
+      }
+
+      .action-overlay {
+        opacity: 1;
+      }
+    }
+  }
+
+  .product-media {
+    position: relative;
+    overflow: hidden;
+    aspect-ratio: 1 / 1;
+    background-color: color-mix(in srgb, var(--default-color), transparent 96%);
+
+    img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: transform 0.3s ease;
+    }
+  }
+
+  .badge-label {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--accent-color), transparent 90%);
+    color: var(--accent-color);
+    border: 1px solid color-mix(in srgb, var(--accent-color), transparent 70%);
+
+    &.discount {
+      background: color-mix(in srgb, #dc2626, transparent 90%);
+      color: #dc2626;
+      border-color: color-mix(in srgb, #dc2626, transparent 70%);
+    }
+
+    &.trending {
+      background: color-mix(in srgb, #f59e0b, transparent 90%);
+      color: #92400e;
+      border-color: color-mix(in srgb, #f59e0b, transparent 70%);
+    }
+  }
+
+  .action-overlay {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+
+    @media (max-width: 768px) {
+      opacity: 1;
+    }
+  }
+
+  .action-btn {
+    width: 36px;
+    height: 36px;
+    border: 1px solid color-mix(in srgb, var(--default-color), transparent 85%);
+    background: var(--surface-color);
+    color: var(--default-color);
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 14px;
+
+    &:hover {
+      background: var(--accent-color);
+      color: var(--contrast-color);
+      border-color: var(--accent-color);
+    }
+
+    &.active {
+      background: var(--accent-color);
+      color: var(--contrast-color);
+      border-color: var(--accent-color);
+    }
+  }
+
+  .product-body {
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+  }
+
+  .product-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+
+  .category-tag {
+    font-size: 12px;
+    font-weight: 500;
+    color: color-mix(in srgb, var(--default-color), transparent 40%);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  .rating-group {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    color: var(--default-color);
+
+    i {
+      color: #f59e0b;
+      font-size: 12px;
+    }
+
+    span {
+      font-weight: 500;
+      font-size: 13px;
+    }
+
+    .count {
+      font-weight: 400;
+      color: color-mix(in srgb, var(--default-color), transparent 50%);
+      font-size: 12px;
+    }
+  }
+
+  .product-title {
+    font-size: 15px;
+    font-weight: 600;
+    line-height: 1.4;
+    margin-bottom: 12px;
+    letter-spacing: -0.01em;
+
+    a {
+      color: var(--heading-color);
+      transition: color 0.2s ease;
+
+      &:hover {
+        color: var(--accent-color);
+      }
+    }
+  }
+
+  .color-options {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 16px;
+  }
+
+  .color-swatch {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+    outline: 2px solid transparent;
+    outline-offset: 1px;
+
+    &:hover {
+      outline-color: color-mix(in srgb, var(--default-color), transparent 70%);
+    }
+
+    &.active {
+      outline-color: color-mix(in srgb, var(--default-color), transparent 50%);
+    }
+  }
+
+  .product-footer {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: auto;
+    padding-top: 16px;
+    border-top: 1px solid color-mix(in srgb, var(--default-color), transparent 90%);
+  }
+
+  .product-price {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--heading-color);
+
+    .original {
+      font-size: 13px;
+      font-weight: 400;
+      color: color-mix(in srgb, var(--default-color), transparent 50%);
+      text-decoration: line-through;
+      margin-right: 6px;
+    }
+
+    .current {
+      color: var(--accent-color);
+    }
+  }
+
+  .cart-btn {
+    width: 40px;
+    height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    background: var(--accent-color);
+    color: var(--contrast-color);
+    font-size: 16px;
+    transition: background 0.2s ease;
+
+    &:hover {
+      background: color-mix(in srgb, var(--accent-color), transparent 15%);
+      color: var(--contrast-color);
+    }
+
+    &:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color), transparent 80%);
+    }
+  }
+
+  @media (max-width: 576px) {
+    .product-body {
+      padding: 12px;
+    }
+
+    .product-title {
+      font-size: 14px;
+    }
+
+    .product-price {
+      font-size: 16px;
+    }
+  }
+}

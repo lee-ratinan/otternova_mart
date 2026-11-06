@@ -1,0 +1,376 @@
+// main: ../main.scss
+/*--------------------------------------------------------------
+# Privacy Section
+--------------------------------------------------------------*/
+.privacy {
+
+  // Section Labels
+  .section-label {
+    font-size: 24px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin-bottom: 8px;
+  }
+
+  .section-desc {
+    font-size: 14px;
+    color: color-mix(in srgb, var(--default-color), transparent 40%);
+    line-height: 1.6;
+    margin-bottom: 0;
+  }
+
+  // Policy Header
+  .policy-header {
+    .policy-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 2px 12px;
+      font-size: 12px;
+      font-weight: 500;
+      border-radius: 12px;
+      background: color-mix(in srgb, var(--accent-color), transparent 90%);
+      color: var(--accent-color);
+      border: 1px solid color-mix(in srgb, var(--accent-color), transparent 70%);
+      margin-bottom: 20px;
+
+      i {
+        font-size: 12px;
+      }
+    }
+
+    h2 {
+      font-size: 36px;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      line-height: 1.2;
+      margin-bottom: 12px;
+    }
+
+    p {
+      font-size: 16px;
+      color: color-mix(in srgb, var(--default-color), transparent 30%);
+      line-height: 1.7;
+      max-width: 600px;
+      margin: 0 auto;
+    }
+
+    @media (max-width: 768px) {
+      h2 {
+        font-size: 28px;
+      }
+    }
+  }
+
+  // Trust Badges
+  .trust-badges {
+    .trust-badge-item {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      background: var(--surface-color);
+      border: 1px solid color-mix(in srgb, var(--default-color), transparent 88%);
+      border-radius: 6px;
+      box-shadow: 0 1px 2px color-mix(in srgb, var(--default-color), transparent 95%);
+      transition: all 0.2s ease;
+
+      &:hover {
+        border-color: color-mix(in srgb, var(--default-color), transparent 80%);
+        box-shadow: 0 4px 12px color-mix(in srgb, var(--default-color), transparent 90%);
+      }
+
+      i {
+        font-size: 16px;
+        color: var(--accent-color);
+      }
+
+      span {
+        font-size: 13px;
+        font-weight: 500;
+      }
+    }
+  }
+
+  // Practice Cards
+  .practices-section {
+    .practice-card {
+      background: var(--surface-color);
+      border: 1px solid color-mix(in srgb, var(--default-color), transparent 88%);
+      border-radius: 8px;
+      box-shadow: 0 1px 3px color-mix(in srgb, var(--default-color), transparent 92%);
+      height: 100%;
+      transition: all 0.2s ease;
+
+      &:hover {
+        border-color: color-mix(in srgb, var(--default-color), transparent 80%);
+        box-shadow: 0 4px 12px color-mix(in srgb, var(--default-color), transparent 90%);
+      }
+
+      .practice-card-header {
+        padding: 20px 24px 16px;
+        border-bottom: 1px solid color-mix(in srgb, var(--default-color), transparent 90%);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+
+        i {
+          font-size: 20px;
+          color: var(--accent-color);
+        }
+
+        h4 {
+          font-size: 16px;
+          font-weight: 600;
+          margin: 0;
+        }
+      }
+
+      .practice-card-content {
+        padding: 16px 24px 24px;
+
+        ul {
+          list-style: none;
+          padding: 0;
+          margin: 0;
+
+          li {
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+            padding: 8px 0;
+            font-size: 14px;
+            color: color-mix(in srgb, var(--default-color), transparent 20%);
+            border-bottom: 1px solid color-mix(in srgb, var(--default-color), transparent 94%);
+
+            &:last-child {
+              border-bottom: none;
+              padding-bottom: 0;
+            }
+
+            &:first-child {
+              padding-top: 0;
+            }
+
+            i {
+              color: var(--accent-color);
+              font-size: 14px;
+              margin-top: 2px;
+              flex-shrink: 0;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  // Security Section
+  .security-section {
+    .security-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      padding: 24px;
+      background: var(--surface-color);
+      border: 1px solid color-mix(in srgb, var(--default-color), transparent 88%);
+      border-radius: 8px;
+      box-shadow: 0 1px 3px color-mix(in srgb, var(--default-color), transparent 92%);
+      height: 100%;
+      transition: all 0.2s ease;
+
+      &:hover {
+        border-color: color-mix(in srgb, var(--default-color), transparent 80%);
+        box-shadow: 0 4px 12px color-mix(in srgb, var(--default-color), transparent 90%);
+      }
+
+      .security-icon {
+        width: 48px;
+        height: 48px;
+        min-width: 48px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 8px;
+        background: color-mix(in srgb, var(--accent-color), transparent 90%);
+
+        i {
+          font-size: 22px;
+          color: var(--accent-color);
+        }
+      }
+
+      .security-info {
+        h4 {
+          font-size: 16px;
+          font-weight: 600;
+          margin-bottom: 4px;
+        }
+
+        p {
+          font-size: 14px;
+          color: color-mix(in srgb, var(--default-color), transparent 35%);
+          line-height: 1.6;
+          margin: 0;
+        }
+      }
+    }
+  }
+
+  // Rights Section
+  .rights-section {
+    .rights-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--accent-color);
+      margin-top: 16px;
+      transition: gap 0.2s ease;
+
+      &:hover {
+        gap: 10px;
+      }
+    }
+
+    .rights-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+
+      .rights-list-item {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        padding: 16px 0;
+        border-bottom: 1px solid color-mix(in srgb, var(--default-color), transparent 90%);
+
+        &:last-child {
+          border-bottom: none;
+          padding-bottom: 0;
+        }
+
+        &:first-child {
+          padding-top: 0;
+        }
+
+        .rights-list-icon {
+          width: 40px;
+          height: 40px;
+          min-width: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border-radius: 8px;
+          background: color-mix(in srgb, var(--accent-color), transparent 90%);
+
+          i {
+            font-size: 18px;
+            color: var(--accent-color);
+          }
+        }
+
+        .rights-list-info {
+          h4 {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 2px;
+          }
+
+          p {
+            font-size: 14px;
+            color: color-mix(in srgb, var(--default-color), transparent 40%);
+            line-height: 1.5;
+            margin: 0;
+          }
+        }
+      }
+    }
+  }
+
+  // Additional Cards
+  .additional-section {
+    .additional-card {
+      padding: 24px;
+      background: var(--surface-color);
+      border: 1px solid color-mix(in srgb, var(--default-color), transparent 88%);
+      border-radius: 8px;
+      box-shadow: 0 1px 3px color-mix(in srgb, var(--default-color), transparent 92%);
+      height: 100%;
+      transition: all 0.2s ease;
+
+      &:hover {
+        border-color: color-mix(in srgb, var(--default-color), transparent 80%);
+        box-shadow: 0 4px 12px color-mix(in srgb, var(--default-color), transparent 90%);
+      }
+
+      i {
+        font-size: 24px;
+        color: color-mix(in srgb, var(--default-color), transparent 40%);
+        margin-bottom: 16px;
+        display: block;
+      }
+
+      h4 {
+        font-size: 16px;
+        font-weight: 600;
+        margin-bottom: 8px;
+      }
+
+      p {
+        font-size: 14px;
+        color: color-mix(in srgb, var(--default-color), transparent 35%);
+        line-height: 1.6;
+        margin: 0;
+      }
+    }
+  }
+
+  // Contact CTA
+  .contact-cta {
+    padding: 32px;
+    background: var(--accent-color);
+    border-radius: 8px;
+
+    h4 {
+      font-size: 20px;
+      font-weight: 600;
+      color: var(--contrast-color);
+      margin-bottom: 4px;
+    }
+
+    p {
+      font-size: 14px;
+      color: color-mix(in srgb, var(--contrast-color), transparent 20%);
+      margin: 0;
+      line-height: 1.6;
+    }
+
+    .cta-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 10px 24px;
+      background: var(--contrast-color);
+      color: var(--accent-color);
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      text-decoration: none;
+      transition: all 0.2s ease;
+
+      &:hover {
+        box-shadow: 0 4px 12px color-mix(in srgb, var(--default-color), transparent 70%);
+        color: var(--accent-color);
+      }
+    }
+
+    @media (max-width: 992px) {
+      text-align: center;
+
+      .cta-btn {
+        margin-top: 8px;
+      }
+    }
+  }
+}

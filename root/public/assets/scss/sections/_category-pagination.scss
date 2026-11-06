@@ -1,0 +1,213 @@
+// main: ../main.scss
+/*--------------------------------------------------------------
+# Category Pagination Section
+--------------------------------------------------------------*/
+.category-pagination {
+  padding-top: 0;
+
+  .pagination-bar {
+    border: 1px solid color-mix(in srgb, var(--default-color), transparent 88%);
+    border-radius: 8px;
+    padding: 12px 24px;
+    background-color: var(--surface-color);
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--default-color), transparent 95%);
+  }
+
+  .results-label {
+    font-size: 14px;
+    color: color-mix(in srgb, var(--default-color), transparent 40%);
+    font-weight: 400;
+    line-height: 1.5;
+
+    .current-page,
+    .total-pages {
+      font-weight: 600;
+      color: var(--default-color);
+    }
+  }
+
+  .page-list {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .page-link-item {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    color: var(--default-color);
+    text-decoration: none;
+    transition: all 0.2s ease;
+    border: 1px solid transparent;
+
+    &:hover:not(.active) {
+      background-color: color-mix(in srgb, var(--default-color), transparent 95%);
+      border-color: color-mix(in srgb, var(--default-color), transparent 85%);
+    }
+
+    &.active {
+      background-color: var(--accent-color);
+      color: var(--contrast-color);
+      font-weight: 600;
+      border-color: var(--accent-color);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color), transparent 80%);
+    }
+  }
+
+  .page-ellipsis {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    font-size: 14px;
+    color: color-mix(in srgb, var(--default-color), transparent 50%);
+    user-select: none;
+    letter-spacing: 2px;
+  }
+
+  .page-control {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 6px;
+    color: var(--default-color);
+    text-decoration: none;
+    border: 1px solid color-mix(in srgb, var(--default-color), transparent 80%);
+    background-color: transparent;
+    transition: all 0.2s ease;
+
+    i {
+      font-size: 14px;
+      line-height: 1;
+    }
+
+    &:hover {
+      background-color: color-mix(in srgb, var(--default-color), transparent 95%);
+      border-color: color-mix(in srgb, var(--default-color), transparent 70%);
+    }
+
+    &:focus-visible {
+      outline: none;
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color), transparent 80%);
+    }
+  }
+
+  .goto-group {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+
+    label {
+      font-size: 14px;
+      font-weight: 500;
+      color: color-mix(in srgb, var(--default-color), transparent 30%);
+      white-space: nowrap;
+    }
+
+    input {
+      width: 56px;
+      height: 36px;
+      text-align: center;
+      border: 1px solid color-mix(in srgb, var(--default-color), transparent 80%);
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--default-color);
+      background-color: var(--background-color);
+      outline: none;
+      transition: all 0.2s ease;
+      -moz-appearance: textfield;
+
+      &::-webkit-outer-spin-button,
+      &::-webkit-inner-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+      }
+
+      &:focus {
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color), transparent 80%);
+      }
+    }
+
+    .goto-btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      height: 36px;
+      padding: 0 16px;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--default-color);
+      background-color: transparent;
+      border: 1px solid color-mix(in srgb, var(--default-color), transparent 80%);
+      text-decoration: none;
+      transition: all 0.2s ease;
+
+      &:hover {
+        background-color: color-mix(in srgb, var(--default-color), transparent 95%);
+        border-color: color-mix(in srgb, var(--default-color), transparent 70%);
+      }
+
+      &:focus-visible {
+        outline: none;
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color), transparent 80%);
+      }
+    }
+  }
+
+  @media (max-width: 768px) {
+    .pagination-bar {
+      padding: 16px;
+    }
+
+    .results-label {
+      text-align: center;
+      font-size: 13px;
+    }
+
+    .goto-group {
+      justify-content: center;
+    }
+
+    .page-link-item,
+    .page-ellipsis,
+    .page-control {
+      width: 32px;
+      height: 32px;
+      font-size: 13px;
+    }
+
+    .goto-group {
+      input {
+        width: 48px;
+        height: 32px;
+      }
+
+      .goto-btn {
+        height: 32px;
+        padding: 0 12px;
+        font-size: 13px;
+      }
+    }
+  }
+}

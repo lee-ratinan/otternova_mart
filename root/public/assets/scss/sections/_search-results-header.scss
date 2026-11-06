@@ -1,0 +1,246 @@
+// main: ../main.scss
+/*--------------------------------------------------------------
+# Search Results Header Section
+--------------------------------------------------------------*/
+.search-results-header {
+  .search-card {
+    background: var(--surface-color);
+    border: 1px solid color-mix(in srgb, var(--default-color), transparent 88%);
+    border-radius: 8px;
+    padding: 24px;
+    margin-bottom: 16px;
+    box-shadow: 0 1px 3px color-mix(in srgb, var(--default-color), transparent 92%);
+  }
+
+  .query-form {
+    .input-group-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .input-label {
+      font-size: 14px;
+      font-weight: 500;
+      color: var(--heading-color);
+    }
+
+    .field-row {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .field-icon {
+      position: absolute;
+      left: 12px;
+      font-size: 14px;
+      color: color-mix(in srgb, var(--default-color), transparent 50%);
+      pointer-events: none;
+    }
+
+    .form-control {
+      height: 40px;
+      padding: 8px 12px 8px 36px;
+      border: 1px solid color-mix(in srgb, var(--default-color), transparent 75%);
+      border-radius: 6px;
+      background: var(--background-color);
+      font-size: 14px;
+      color: var(--default-color);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+      &:focus {
+        outline: none;
+        border-color: var(--accent-color);
+        box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color), transparent 90%);
+      }
+
+      &::placeholder {
+        color: color-mix(in srgb, var(--default-color), transparent 50%);
+      }
+    }
+  }
+
+  .action-btn {
+    height: 40px;
+    background: var(--accent-color);
+    color: var(--contrast-color);
+    font-size: 14px;
+    font-weight: 500;
+    border: none;
+    border-radius: 6px;
+    padding: 8px 24px;
+    transition: background 0.2s ease;
+
+    &:hover {
+      background: color-mix(in srgb, var(--accent-color), transparent 15%);
+      color: var(--contrast-color);
+    }
+
+    &:focus {
+      outline: none;
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color), transparent 80%);
+    }
+  }
+
+  .toolbar-row {
+    background: var(--surface-color);
+    border: 1px solid color-mix(in srgb, var(--default-color), transparent 88%);
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 1px 2px color-mix(in srgb, var(--default-color), transparent 95%);
+  }
+
+  .info-block {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .info-label {
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: color-mix(in srgb, var(--default-color), transparent 40%);
+  }
+
+  .info-value {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+
+  .count-badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 10px;
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 12px;
+    background: color-mix(in srgb, var(--accent-color), transparent 90%);
+    color: var(--accent-color);
+    border: 1px solid color-mix(in srgb, var(--accent-color), transparent 70%);
+  }
+
+  .query-text {
+    font-size: 14px;
+    color: color-mix(in srgb, var(--default-color), transparent 30%);
+
+    em {
+      font-style: normal;
+      font-weight: 600;
+      color: var(--default-color);
+    }
+  }
+
+  .tag-group {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .tag-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--default-color);
+    background: var(--background-color);
+    border: 1px solid color-mix(in srgb, var(--default-color), transparent 85%);
+    padding: 4px 8px 4px 10px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+
+    i:first-child {
+      font-size: 12px;
+      color: color-mix(in srgb, var(--default-color), transparent 40%);
+    }
+
+    .tag-dismiss {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 18px;
+      height: 18px;
+      background: none;
+      border: none;
+      border-radius: 4px;
+      padding: 0;
+      cursor: pointer;
+      color: color-mix(in srgb, var(--default-color), transparent 50%);
+      transition: all 0.2s ease;
+
+      i {
+        font-size: 12px;
+      }
+
+      &:hover {
+        background: color-mix(in srgb, var(--default-color), transparent 90%);
+        color: var(--default-color);
+      }
+    }
+
+    &:hover {
+      border-color: color-mix(in srgb, var(--default-color), transparent 70%);
+    }
+  }
+
+  .add-filter-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    font-weight: 500;
+    color: color-mix(in srgb, var(--default-color), transparent 30%);
+    background: none;
+    border: 1px dashed color-mix(in srgb, var(--default-color), transparent 80%);
+    padding: 4px 10px;
+    border-radius: 6px;
+    transition: all 0.2s ease;
+
+    &:hover {
+      border-color: var(--accent-color);
+      color: var(--accent-color);
+      background: color-mix(in srgb, var(--accent-color), transparent 95%);
+    }
+  }
+
+  .sort-dropdown {
+    height: 40px;
+    border: 1px solid color-mix(in srgb, var(--default-color), transparent 75%);
+    border-radius: 6px;
+    color: var(--default-color);
+    background-color: var(--background-color);
+    font-size: 14px;
+    padding: 8px 36px 8px 12px;
+    transition: all 0.2s ease;
+
+    &:focus {
+      outline: none;
+      border-color: var(--accent-color);
+      box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent-color), transparent 90%);
+    }
+  }
+
+  @media (max-width: 768px) {
+    .search-card {
+      padding: 16px;
+    }
+
+    .toolbar-row {
+      padding: 16px;
+    }
+
+    .info-value {
+      justify-content: flex-start;
+    }
+
+    .tag-group {
+      justify-content: flex-start;
+    }
+  }
+}
