@@ -6,9 +6,11 @@ class Home extends BaseController
 {
     public function index(): string
     {
+        // still no real idea what i should do with this page
         $locale = $this->request->getLocale();
         $data   = [
             'locale' => $locale,
+            'slug'   => 'home'
         ];
         return view('home', $data);
     }
@@ -18,6 +20,7 @@ class Home extends BaseController
         $locale = $this->request->getLocale();
         $data   = [
             'locale' => $locale,
+            'slug'   => 'search'
         ];
         return view('searchResults', $data);
     }
@@ -27,6 +30,7 @@ class Home extends BaseController
         $locale = $this->request->getLocale();
         $data   = [
             'locale' => $locale,
+            'slug'   => 'terms-of-service'
         ];
         return view('termsOfService', $data);
     }
@@ -36,6 +40,7 @@ class Home extends BaseController
         $locale = $this->request->getLocale();
         $data   = [
             'locale' => $locale,
+            'slug'   => 'privacy-policy'
         ];
         return view('privacyPolicy', $data);
     }

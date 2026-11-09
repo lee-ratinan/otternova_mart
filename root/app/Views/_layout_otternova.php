@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <title><?= lang('System.page.home') ?> | <?= lang('System.site-title') ?></title>
+    <title><?= $page_title ?? lang('System.page.' . $slug) ?> | <?= (isset($business_name) ? $business_name . ' | ' : '') . lang('System.site-title') ?></title>
     <meta name="description" content="<?= $meta_description ?? '???' ?>">
     <meta name="keywords" content="<?= $meta_keywords ?? '???' ?>">
     <!-- Favicons -->
