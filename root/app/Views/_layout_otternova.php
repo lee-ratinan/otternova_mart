@@ -966,6 +966,7 @@
 <script src="<?= base_url('assets/vendor/drift-zoom/Drift.min.js') ?>"></script>
 <script src="<?= base_url('assets/vendor/glightbox/js/glightbox.min.js') ?>"></script>
 <script src="<?= base_url('assets/vendor/purecounter/purecounter_vanilla.js') ?>"></script>
+<script src="<?= getenv('LINK_API') ?>js/tracker.js" data-site="www" data-business="" defer></script>
 <!-- Main JS File -->
 <script src="<?= base_url('assets/js/main.js') ?>"></script>
 </body>
