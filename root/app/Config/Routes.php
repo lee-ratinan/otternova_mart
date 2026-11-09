@@ -9,21 +9,34 @@ $routes->get('terms-of-service', 'Home::termsOfService');
 $routes->get('privacy-policy', 'Home::privacyPolicy');
 
 // BUSINESS //
-// business product/service listing page
-$routes->get('(:any)/catalog', 'Home::businessCatalog/$1');
 // product info page
-$routes->get('(:any)/product/(:any)', 'Home::businessProductInfo/$1/$2');
+$routes->get('(:any)/product/(:any)', 'Business::productInfo/$1/$2');
 // service info page
-$routes->get('(:any)/service/(:any)', 'Home::businessServiceInfo/$1/$2');
+$routes->get('(:any)/service/(:any)', 'Business::serviceInfo/$1/$2');
 //       - search sessions
-$routes->get('(:any)/service/(:any)/sessions', 'Home::businessServiceSessions/$1/$2');
+$routes->get('(:any)/service/(:any)/sessions', 'Business::serviceSessions/$1/$2');
 //       - search available slots
-$routes->get('(:any)/service/(:any)/slots', 'Home::businessServiceSlots/$1/$2');
+$routes->get('(:any)/service/(:any)/slots', 'Business::serviceSlots/$1/$2');
 // cart page
-$routes->get('(:any)/cart', 'Home::businessCart/$1');
+$routes->get('(:any)/cart', 'Business::cart/$1');
 // checkout page
-$routes->get('(:any)/checkout', 'Home::businessCheckout/$1');
+$routes->get('(:any)/checkout', 'Business::checkout/$1');
+// check my order status
+$routes->get('(:any)/check-order-status/(:any)', 'Business::checkOrderStatus/$1/$2');
+$routes->get('(:any)/my-order-history', 'Business::myOrderHistory/$1');
 // other businesses' page
-$routes->get('(:any)/pages/(:any)', 'Home::showBusinessPages/$1/$2');
+$routes->get('(:any)/pages/(:any)', 'Business::showBusinessPages/$1/$2');
 // business main page
-$routes->get('(:any)', 'Home::showBusinessHome/$1');
+$routes->get('(:any)/home', 'Business::systemHome/$1'); // show main home
+$routes->get('(:any)', 'Business::ownHome/$1'); // show self-built home if exist, otherwise show main home
+// POST
+$routes->post('(:any)/search-sessions', 'Business::searchSessions/$1');
+$routes->post('(:any)/search-slots', 'Business::searchSlots/$1');
+$routes->post('(:any)/add-to-cart', 'Business::addToCart/$1');
+$routes->post('(:any)/remove-from-cart', 'Business::removeFromCart/$1');
+$routes->post('(:any)/update-cart', 'Business::updateCart/$1');
+$routes->post('(:any)/clear-cart', 'Business::clearCart/$1');
+$routes->post('(:any)/checkout-init', 'Business::checkoutInit/$1');
+$routes->post('(:any)/checkout-confirm', 'Business::checkoutConfirm/$1');
+$routes->post('(:any)/retrieve-order-status', 'Business::retrieveOrderStatus/$1');
+$routes->post('(:any)/retrieve-order-history', 'Business::retrieveOrderHistory/$1');
