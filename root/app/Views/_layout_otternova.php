@@ -3,16 +3,18 @@
 <head>
     <meta charset="utf-8">
     <meta content="width=device-width, initial-scale=1.0" name="viewport">
-    <title><?= $page_title ?? lang('System.page.' . $slug) ?> | <?= (isset($business_name) ? $business_name . ' | ' : '') . lang('System.site-title') ?></title>
-    <meta name="description" content="<?= $meta_description ?? '???' ?>">
-    <meta name="keywords" content="<?= $meta_keywords ?? '???' ?>">
+    <title><?= esc($page_title ?? lang('System.page.' . $slug)) ?> | <?= esc((isset($business_name) ? $business_name . ' | ' : '') . lang('System.site-title')) ?></title>
+    <meta name="description" content="<?= esc($meta_description ?? '???', 'attr') ?>">
+    <meta name="keywords" content="<?= esc($meta_keywords ?? '???', 'attr') ?>">
     <!-- Favicons -->
     <link href="<?= base_url('assets/img/logo.webp') ?>" rel="icon">
     <link href="<?= base_url('assets/img/logo.webp') ?>" rel="apple-touch-icon">
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com" rel="preconnect">
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
-    <?php if ('en-US' == $locale): ?>
+    <?php if (isset($google_fonts_url)): ?>
+        <link href="<?= esc($google_fonts_url, 'attr') ?>" rel="stylesheet">
+    <?php elseif ('en-US' == $locale): ?>
         <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200..700&family=Raleway:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet">
     <?php elseif ('th' == $locale): ?>
         <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Thai:wght@100..900&family=Prompt:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
@@ -347,7 +349,7 @@
 <script src="<?= base_url('assets/vendor/drift-zoom/Drift.min.js') ?>"></script>
 <script src="<?= base_url('assets/vendor/glightbox/js/glightbox.min.js') ?>"></script>
 <script src="<?= base_url('assets/vendor/purecounter/purecounter_vanilla.js') ?>"></script>
-<script src="<?= getenv('LINK_API') ?>js/tracker.js" data-site="www" data-business="" defer></script>
+<script src="<?= getenv('LINK_API') ?>js/tracker.js" data-site="mart" data-business="<?= esc($business_slug ?? '', 'attr') ?>" defer></script>
 <!-- Main JS File -->
 <script src="<?= base_url('assets/js/main.js') ?>"></script>
 </body>

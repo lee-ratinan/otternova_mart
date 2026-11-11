@@ -8,6 +8,7 @@ use CodeIgniter\HTTP\IncomingRequest;
 use CodeIgniter\HTTP\RequestInterface;
 use CodeIgniter\HTTP\ResponseInterface;
 use Psr\Log\LoggerInterface;
+use Throwable;
 
 /**
  * BaseController provides a convenient place for loading components
@@ -45,5 +46,41 @@ abstract class BaseController extends Controller
 
         // Preload any models, libraries, etc, here.
         // $this->session = service('session');
+    }
+
+    /**
+     * GET a public endpoint of LINK_INTERNAL_API, such as v1/mart/site; no sign-in is needed for those
+     * @param string $endpoint
+     * @param array  $query
+     * @return array{int, array} [http status, decoded body]; 503 when the API could not be reached or answered
+     *                           something that is not its JSON
+     */
+    protected function fetchApi(string $endpoint, array $query): array
+    {
+        try {
+            $response = service('curlrequest')->get(getenv('LINK_INTERNAL_API') . $endpoint, [
+                'query'       => $query,
+                'headers'     => [
+                    'Accept'          => 'application/json',
+                    'Accept-Language' => $this->request->getLocale(),
+                ],
+                'timeout'     => 10,
+                'http_errors' => false,
+            ]);
+            $code = $response->getStatusCode();
+            $body = json_decode($response->getBody(), true);
+            // a 404 without the API's own error body means the endpoint is missing, not the record
+            if (! is_array($body) || $code >= 500 || ($code === 404 && ($body['status'] ?? '') !== 'error')) {
+                log_message('error', 'LINK_INTERNAL_API ' . $endpoint . ' returned HTTP ' . $code);
+
+                return [503, []];
+            }
+
+            return [$code, $body];
+        } catch (Throwable $e) {
+            log_message('error', 'LINK_INTERNAL_API ' . $endpoint . ' failed: ' . $e->getMessage());
+
+            return [503, []];
+        }
     }
 }
