@@ -7,6 +7,17 @@ use CodeIgniter\HTTP\ResponseInterface;
 class Business extends BaseController
 {
 
+    public function systemHome(string $businessSlug): string
+    {
+        $locale = $this->request->getLocale();
+        $data   = [
+            'locale'     => $locale,
+            'page_title' => $businessSlug,
+            'css'        => listDefaultThemeVariables($locale),
+        ];
+        return view('systemHome', $data);
+    }
+
     public function productInfo(string $businessSlug, string $artifactPublicId): string
     {
         $locale = $this->request->getLocale();
@@ -79,22 +90,13 @@ class Business extends BaseController
         return view('myOrderHistory', $data);
     }
 
-    public function systemHome(string $businessSlug): string
-    {
-        $locale = $this->request->getLocale();
-        $data   = [
-            'locale' => $locale,
-        ];
-        return view('systemHome', $data);
-    }
-
     public function showBusinessPages(string $businessSlug, string $pagePublicId): string
     {
         $locale = $this->request->getLocale();
         return 'Page for ' . $pagePublicId;
     }
 
-    public function ownHome(string $businessSlug, string $pagePublicId): string
+    public function ownHome(string $businessSlug): string
     {
         $ownHome = null;
         if (!is_null($ownHome)) {
