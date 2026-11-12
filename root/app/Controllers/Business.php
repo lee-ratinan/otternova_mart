@@ -113,20 +113,110 @@ class Business extends BaseController
         return view('serviceSessions', $data);
     }
 
+    /**
+     * The times an appointment (a variant with booking type A) can be booked at, from LINK_INTERNAL_API v1/mart/slots,
+     * at one store on one day of the booking window the business set (booking_horizon_days and the notice). The page
+     * is driven by its query string, so a customer can change any part of it and share the link:
+     * - variant: the variant's public_id (required)
+     * - store:   the store's public_id; the API picks the first one when not given
+     * - date:    Y-m-d, a day of the store's window; the first day with a free time when not given
+     * - staff:   a person's public_id; anyone when not given
+     * Each time comes with whom it books; a person's restrictions are shown when they are chosen, and with the time
+     * picked. A filter the API turns down (a day outside the window, say) is dropped and said why.
+     * @param string $businessSlug
+     * @return string
+     */
     public function serviceSlots(string $businessSlug): string
     {
-        $locale           = $this->request->getLocale();
-        $artifactPublicId = $this->request->getGet('variant');
+        $locale = $this->request->getLocale();
         $site   = $this->site($businessSlug, $locale);
-        $data             = [
-            'locale' => $locale,
-            'page_title' => '[search slots] - ' . $artifactPublicId,
-            'meta_description' => '',
-            'meta_keywords'    => '',
+        $query  = ['business_slug' => $businessSlug, 'lang' => $locale, 'variant' => (string) $this->request->getGet('variant')];
+        foreach (['store', 'date', 'staff'] as $name) {
+            $value = $this->request->getGet($name);
+            if (is_string($value) && trim($value) !== '') {
+                $query[$name] = trim($value);
+            }
+        }
+        [$code, $body] = $this->fetchApi('v1/mart/slots', $query);
+        $notice        = null;
+        if ($code === 422) {
+            $errors = is_array($body['errors'] ?? null) ? $body['errors'] : [];
+            $notice = implode(' ', array_map('strval', $errors));
+            // a person of another store goes with the store; a date outside its window too
+            $query = array_diff_key($query, $errors + (isset($errors['store']) ? ['staff' => true, 'date' => true] : []));
+            [$code, $body] = $this->fetchApi('v1/mart/slots', $query);
+        }
+        if ($code === 404 || $code === 400 || $code === 422) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+        if ($code !== 200 || ! is_array($body['data'] ?? null)) {
+            throw new RuntimeException(lang('Business.load-failed'));
+        }
+
+        $data     = $body['data'];
+        $service  = $data['service'];
+        $variant  = $service['variant'];
+        $currency = (string) $site['business']['currency_code'];
+        $stores   = [];
+        foreach ($data['stores'] as $store) {
+            $stores[$store['public_id']] = $store + ['address_text' => $this->address($store)];
+        }
+        $staff = [];
+        foreach ($data['staff'] as $person) {
+            $staff[$person['public_id']] = $person + ['restriction_lines' => $this->restrictionLines($person['restrictions'])];
+        }
+        $store   = $stores[$data['store']] ?? null;
+        $chosen  = isset($query['staff'], $staff[$query['staff']]) ? $staff[$query['staff']] : null;
+        $filters = ['variant' => $variant['public_id'], 'store' => $data['store'], 'date' => $data['date'], 'staff' => $chosen['public_id'] ?? null];
+        $url     = static fn (array $change): string => base_url(rawurlencode($businessSlug) . '/search-slots') . '?'
+            . http_build_query(array_filter(array_merge($filters, $change), static fn ($value): bool => $value !== null && $value !== ''));
+        $price   = $variant['price'] ?? null;
+        $details = [lang('Business.service.minutes', [(int) $variant['duration_minutes']])];
+        if ((int) $variant['staff_required'] > 1) {
+            $details[] = lang('Business.slots.staff-required', [(int) $variant['staff_required']]);
+        }
+
+        $periods = [];
+        foreach ($data['slots'] as $slot) {
+            $hour   = (int) substr($slot['time'], 0, 2);
+            $people = array_values(array_filter(array_map(static fn (string $id): ?array => $staff[$id] ?? null, $slot['staff'])));
+            $periods[$hour < 12 ? 'morning' : ($hour < 17 ? 'afternoon' : 'evening')][] = [
+                'starts_at' => $slot['starts_at'],
+                'time'      => $slot['time'],
+                'end_time'  => $slot['end_time'],
+                'staff'     => array_map(static fn (array $p): array => ['public_id' => $p['public_id'], 'name' => $p['name'], 'restrictions' => $p['restriction_lines']], $people),
+            ];
+        }
+
+        return view('serviceSlots', $this->layout($site, $businessSlug, $locale) + [
+            'page_title'       => lang('Business.slots.title', [$service['name']]),
+            'business_name'    => $site['business']['name'],
+            'meta_description' => $site['meta']['description'],
+            'meta_keywords'    => $site['meta']['keywords'],
             'site'             => $site,
-            'css' => listDefaultThemeVariables()
-        ];
-        return view('serviceSlots', $data);
+            'service'          => $service + [
+                'url'     => base_url(rawurlencode($businessSlug) . '/service/' . rawurlencode($service['public_id'])),
+                'label'   => $variant['label'],
+                'details' => $details,
+                'price'   => $price === null ? null : $this->money((float) $price['active'], $currency, $locale),
+                'compare' => $price !== null && $price['compare'] !== null && (float) $price['compare'] > (float) $price['active']
+                    ? $this->money((float) $price['compare'], $currency, $locale) : null,
+            ],
+            'variant'          => $variant,
+            'policy'           => $this->bookingPolicy($data['rule']),
+            'window'           => $data['window'],
+            'date'             => $data['date'],
+            'date_label'       => $data['date'] === null ? null : $this->day($data['date'], $locale, 'EEEE d MMMM y'),
+            'days'             => $data['window'] === null ? [] : $this->dayStrip($data['window'], $data['date'], $locale, $url),
+            'stores'           => array_values($stores),
+            'store'            => $store,
+            'staff'            => array_values($staff),
+            'chosen_staff'     => $chosen,
+            'periods'          => $periods,
+            'slot_count'       => count($data['slots']),
+            'notice'           => $notice,
+            'url'              => $url,
+        ]);
     }
 
     public function cart(string $businessSlug): string
@@ -443,6 +533,111 @@ class Business extends BaseController
         }
 
         return [$css, $theme['google_fonts_url']];
+    }
+
+    /** A store's address on one line, or null when it has none */
+    private function address(array $store): ?string
+    {
+        $address = $store['address'] ?? [];
+        $parts   = array_filter([$address['line_1'] ?? null, $address['line_2'] ?? null, trim(($address['city'] ?? '') . ' ' . ($address['postal_code'] ?? ''))],
+            static fn ($part): bool => $part !== null && trim((string) $part) !== '');
+
+        return $parts === [] ? null : implode(', ', $parts);
+    }
+
+    /**
+     * The customers a person does not serve, as a customer reads it
+     * @param array|null $restrictions {excluded_genders: [M|F|NB], age_min, age_max}
+     * @return list<string> None for no restriction
+     */
+    private function restrictionLines(?array $restrictions): array
+    {
+        if ($restrictions === null) {
+            return [];
+        }
+        $lines   = [];
+        $genders = array_map(static fn (string $gender): string => lang('Business.slots.gender.' . $gender), $restrictions['excluded_genders'] ?? []);
+        if ($genders !== []) {
+            $lines[] = lang('Business.slots.not-serving', [implode(', ', $genders)]);
+        }
+        $min = $restrictions['age_min'] ?? null;
+        $max = $restrictions['age_max'] ?? null;
+        if ($min !== null && $max !== null) {
+            $lines[] = lang('Business.slots.age-between', [(int) $min, (int) $max]);
+        } elseif ($min !== null) {
+            $lines[] = lang('Business.slots.age-from', [(int) $min]);
+        } elseif ($max !== null) {
+            $lines[] = lang('Business.slots.age-up-to', [(int) $max]);
+        }
+
+        return $lines;
+    }
+
+    /**
+     * The booking rule as a customer reads it: how far ahead, and how much notice
+     * @param array $rule v1/mart/slots rule
+     * @return list<string>
+     */
+    private function bookingPolicy(array $rule): array
+    {
+        $value  = (int) $rule['notice_value'];
+        $policy = [lang('Business.slots.horizon', [(int) $rule['horizon_days']])];
+        if ($rule['notice_unit'] === 'D') {
+            $policy[] = lang('Business.slots.notice-days', [$value, (string) $rule['notice_time']]);
+        } elseif ($value >= 60 && $value % 60 === 0) {
+            $policy[] = lang('Business.slots.notice-hours', [intdiv($value, 60)]);
+        } elseif ($value > 0) {
+            $policy[] = lang('Business.slots.notice-minutes', [$value]);
+        }
+
+        return $policy;
+    }
+
+    /**
+     * Up to a week of days around the chosen one, within the window, each a link to its slots
+     * @param array{first_date: string, last_date: string} $window
+     * @param string   $date Y-m-d, the chosen day
+     * @param string   $locale
+     * @param callable $url  array of query changes => the page's URL
+     * @return array{days: list<array{date: string, weekday: string, day: string, month: string, url: string, active: bool}>, previous: string|null, next: string|null, first: string, last: string}
+     */
+    private function dayStrip(array $window, string $date, string $locale, callable $url): array
+    {
+        $first = new \DateTimeImmutable($window['first_date']);
+        $last  = new \DateTimeImmutable($window['last_date']);
+        $chosen = new \DateTimeImmutable($date);
+        // the chosen day in the middle where the window allows
+        $start = max($first, min($chosen->modify('-3 days'), $last->modify('-6 days')));
+        $days  = [];
+        for ($day = $start; $day <= $last && count($days) < 7; $day = $day->modify('+1 day')) {
+            $ymd    = $day->format('Y-m-d');
+            $days[] = [
+                'date'    => $ymd,
+                'weekday' => $this->day($ymd, $locale, 'EEE'),
+                'day'     => $this->day($ymd, $locale, 'd'),
+                'month'   => $this->day($ymd, $locale, 'MMM'),
+                'url'     => $url(['date' => $ymd]),
+                'active'  => $ymd === $date,
+            ];
+        }
+        $previous = max($first, $chosen->modify('-7 days'));
+        $next     = min($last, $chosen->modify('+7 days'));
+
+        return [
+            'days'     => $days,
+            'previous' => $chosen > $first ? $url(['date' => $previous->format('Y-m-d')]) : null,
+            'next'     => $chosen < $last ? $url(['date' => $next->format('Y-m-d')]) : null,
+            'first'    => $window['first_date'],
+            'last'     => $window['last_date'],
+        ];
+    }
+
+    /** A Y-m-d date in the locale's words, by an ICU pattern ("EEE": Mon) */
+    private function day(string $date, string $locale, string $pattern): string
+    {
+        $formatter = new \IntlDateFormatter($locale, \IntlDateFormatter::NONE, \IntlDateFormatter::NONE, 'UTC', null, $pattern);
+
+        return (string) $formatter->format(new \DateTimeImmutable($date, new \DateTimeZone('UTC')));
     }
 
     /**
