@@ -58,6 +58,7 @@ class Business extends BaseController
         $locale = $this->request->getLocale();
         $data   = [
             'locale' => $locale,
+            'page_title' => '[product name]'
         ];
         return view('productInfo', $data);
     }
@@ -67,6 +68,8 @@ class Business extends BaseController
         $locale = $this->request->getLocale();
         $data   = [
             'locale' => $locale,
+            'page_title' => '[service name]',
+            'css' => listDefaultThemeVariables($locale),
         ];
         return view('serviceInfo', $data);
     }
