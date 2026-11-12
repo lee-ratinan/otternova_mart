@@ -14,9 +14,9 @@ $routes->get('(:any)/product/(:any)', 'Business::productInfo/$1/$2');
 // service info page
 $routes->get('(:any)/service/(:any)', 'Business::serviceInfo/$1/$2');
 //       - search sessions
-$routes->get('(:any)/service/(:any)/sessions', 'Business::serviceSessions/$1/$2');
+$routes->get('(:any)/search-sessions', 'Business::serviceSessions/$1');
 //       - search available slots
-$routes->get('(:any)/service/(:any)/slots', 'Business::serviceSlots/$1/$2');
+$routes->get('(:any)/search-slots', 'Business::serviceSlots/$1');
 // cart page
 $routes->get('(:any)/cart', 'Business::cart/$1');
 // checkout page
