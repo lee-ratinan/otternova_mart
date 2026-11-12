@@ -50,6 +50,7 @@ class Business extends BaseController
             'featured'         => $featured,
             'hero_tiles'       => $this->heroTiles($featured),
             'carousel'         => $this->unique(array_merge($featured['best_sellers'], $featured['trending'], $featured['highest_rated'])),
+            'indicators'       => $this->indicators($business, $locale),
         ]);
     }
 
@@ -297,6 +298,52 @@ class Business extends BaseController
         }
 
         return [$css, $theme['google_fonts_url']];
+    }
+
+    /**
+     * What the hero says about the business for customers to know before they come: its rating, who it is for,
+     * and what is paid besides the prices
+     * @param array  $business v1/mart/site's business
+     * @param string $locale
+     * @return list<array{0: string, 1: string}> [Bootstrap icon, text]
+     */
+    private function indicators(array $business, string $locale): array
+    {
+        $indicators = [];
+        if ((int) $business['rating']['count'] > 0) {
+            $indicators[] = ['bi-star-fill', number_format((float) $business['rating']['average'], 1) . ' · ' . lang('Business.reviews', [(int) $business['rating']['count']])];
+        }
+        if ($business['audience']['age_restricted']) {
+            $indicators[] = ['bi-person-exclamation', lang('Business.adults-only')];
+        }
+        $lgbt = (string) $business['audience']['lgbt'];
+        if ($lgbt !== 'GEN' && lang('Business.lgbt.' . $lgbt) !== 'Business.lgbt.' . $lgbt) {
+            $indicators[] = ['bi-heart', lang('Business.lgbt.' . $lgbt)];
+        }
+        $naturist = (string) $business['audience']['naturist'];
+        if ($naturist !== 'GEN' && lang('Business.naturist.' . $naturist) !== 'Business.naturist.' . $naturist) {
+            $indicators[] = ['bi-sun', lang('Business.naturist.' . $naturist)];
+        }
+
+        $currency = (string) $business['currency_code'];
+        $amount   = fn (array $charge): string => $charge['unit'] === 'F'
+            ? $this->money((float) $charge['value'], $currency, $locale)
+            : rtrim(rtrim(number_format((float) $charge['value'], 2, '.', ''), '0'), '.') . '%';
+        // tips the customer pays at checkout; off-system and disabled ones are not the page's to tell
+        $tip = $business['charges']['tip'];
+        if (in_array($tip['policy'], ['O', 'M'], true)) {
+            $key  = 'Business.tip.' . ($tip['policy'] === 'M' ? 'required' : 'optional');
+            $text = (float) $tip['value'] > 0
+                ? lang($key . '-' . ($tip['kind'] === 'M' ? 'minimum' : 'suggested'), [$amount($tip)])
+                : lang($key);
+            $indicators[] = ['bi-cash-coin', $text];
+        }
+        $service = $business['charges']['service_charge'];
+        if ((float) $service['value'] > 0) {
+            $indicators[] = ['bi-receipt', lang($service['unit'] === 'F' ? 'Business.service-charge-fixed' : 'Business.service-charge', [$amount($service)])];
+        }
+
+        return $indicators;
     }
 
     private function money(float $amount, string $currency, string $locale): string

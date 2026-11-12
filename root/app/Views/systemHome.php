@@ -6,6 +6,7 @@
  * @var array       $featured   best_sellers, trending, highest_rated: cards as Business::card() makes them
  * @var list<array> $hero_tiles up to three: {card, badge, accent}
  * @var list<array> $carousel   every featured card once
+ * @var list<array> $indicators [Bootstrap icon, text], as Business::indicators() makes them
  */
 $this->extend('_layout_otternova');
 
@@ -18,23 +19,6 @@ $price   = static fn (array $card): string => esc($card['from'] ? lang('Business
 $firstSection = $featured['best_sellers'] !== [] ? '#best-sellers' : '#cards';
 $hasCards     = $carousel !== [];
 
-// what the hero can truly say about the business, in place of the template's made-up promises
-$indicators = [];
-if ((int) $business['rating']['count'] > 0) {
-    $indicators[] = ['bi-star-fill', number_format((float) $business['rating']['average'], 1) . ' · ' . lang('Business.reviews', [(int) $business['rating']['count']])];
-}
-if (($business['contact']['city'] ?? null) !== null) {
-    $indicators[] = ['bi-geo-alt', $business['contact']['city']];
-}
-if (count($site['stores']) > 1) {
-    $indicators[] = ['bi-shop', lang('Business.stores', [count($site['stores'])])];
-}
-if (($business['contact']['phone_number'] ?? null) !== null) {
-    $indicators[] = ['bi-telephone', $business['contact']['phone_number']];
-}
-if ($business['audience']['age_restricted']) {
-    $indicators[] = ['bi-person-exclamation', lang('Business.adults-only')];
-}
 ?>
 <?= $this->section('content') ?>
     <main class="main">
