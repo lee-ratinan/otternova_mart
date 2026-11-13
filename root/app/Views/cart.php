@@ -137,7 +137,7 @@ $json     = static fn ($value): string => json_encode($value, JSON_HEX_TAG | JSO
                                             </div>
                                         </div>
                                     <?php endif ?>
-                                    <div class="line-error text-danger" role="alert" hidden></div>
+                                    <div class="line-error text-danger" role="alert"<?= isset($problems[$line['id']]) ? '' : ' hidden' ?>><?= esc($problems[$line['id']] ?? '') ?></div>
                                     <noscript><button type="submit" class="btn btn-sm btn-outline-secondary mt-2"><?= lang('Business.cart.update') ?></button></noscript>
                                 </form>
                                 <form class="remove-form" method="post" action="<?= esc($urls['remove'], 'attr') ?>">
@@ -182,9 +182,13 @@ $json     = static fn ($value): string => json_encode($value, JSON_HEX_TAG | JSO
                                 <span class="total-value" id="cart-total"><?= esc($summary['subtotal']) ?></span>
                             </div>
                             <p class="charges-note"><?= lang('Business.cart.charges-note') ?></p>
-                            <a href="<?= esc($urls['checkout'], 'attr') ?>" id="cart-proceed" class="btn proceed-btn<?= $summary['ready'] ? '' : ' disabled' ?>"<?= $summary['ready'] ? '' : ' aria-disabled="true"' ?>>
-                                <?= lang('Business.cart.proceed') ?> <i class="bi bi-arrow-right"></i>
-                            </a>
+                            <!-- the whole cart is checked again before the checkout opens -->
+                            <form method="post" action="<?= esc($urls['checkout'], 'attr') ?>">
+                                <?= csrf_field() ?>
+                                <button type="submit" id="cart-proceed" class="btn proceed-btn w-100<?= $summary['ready'] ? '' : ' disabled' ?>"<?= $summary['ready'] ? '' : ' aria-disabled="true"' ?>>
+                                    <?= lang('Business.cart.proceed') ?> <i class="bi bi-arrow-right"></i>
+                                </button>
+                            </form>
                             <p class="names-needed" id="cart-names-needed"<?= $summary['missing'] > 0 ? '' : ' hidden' ?>><?= esc($summary['missing_label']) ?></p>
                         </div>
                     </div>

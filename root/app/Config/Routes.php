@@ -21,6 +21,8 @@ $routes->get('(:any)/search-slots', 'Business::serviceSlots/$1');
 $routes->get('(:any)/cart', 'Business::cart/$1');
 // checkout page
 $routes->get('(:any)/checkout', 'Business::checkout/$1');
+// an order's payment, for the browser that placed it
+$routes->get('(:any)/payment/(:any)', 'Business::payment/$1/$2');
 // check my order status
 $routes->get('(:any)/check-order-status/(:any)', 'Business::checkOrderStatus/$1/$2');
 $routes->get('(:any)/my-order-history', 'Business::myOrderHistory/$1');
@@ -38,5 +40,6 @@ $routes->post('(:any)/update-cart', 'Business::updateCart/$1');
 $routes->post('(:any)/clear-cart', 'Business::clearCart/$1');
 $routes->post('(:any)/checkout-init', 'Business::checkoutInit/$1');
 $routes->post('(:any)/checkout-confirm', 'Business::checkoutConfirm/$1');
+$routes->post('(:any)/checkout-quote', 'Business::checkoutQuote/$1');
 $routes->post('(:any)/retrieve-order-status', 'Business::retrieveOrderStatus/$1');
 $routes->post('(:any)/retrieve-order-history', 'Business::retrieveOrderHistory/$1');

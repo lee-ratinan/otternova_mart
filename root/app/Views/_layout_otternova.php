@@ -38,6 +38,14 @@
     * Author: BootstrapMade.com
     * License: https://bootstrapmade.com/license/
     ======================================================== -->
+    <script>
+        // calls made before tracker.js has loaded are kept for it; see tracker.js
+        window.OtternovaTracker = window.OtternovaTracker || { q: [] };
+        OtternovaTracker.track = OtternovaTracker.track || function () { OtternovaTracker.q.push(arguments); };
+        <?php foreach (array_merge(session()->getFlashdata('tracker_events') ?? [], $tracker_events ?? []) as [$eventName, $eventProps]): ?>
+        OtternovaTracker.track(<?= json_encode($eventName, JSON_HEX_TAG | JSON_HEX_AMP) ?>, <?= json_encode($eventProps, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>);
+        <?php endforeach ?>
+    </script>
 </head>
 <body class="index-page lang-<?= $locale ?>">
 <header id="header" class="header position-relative">
@@ -165,8 +173,12 @@
                                         <span class="subtotal-value"><?= esc($cart['summary']['subtotal']) ?></span>
                                     </div>
                                     <p class="flyout-note"<?= $cart['summary']['missing'] > 0 ? '' : ' hidden' ?>><?= esc($cart['summary']['missing_label']) ?></p>
-                                    <!-- the checkout until a participant's name is missing, then the cart, where it is added -->
-                                    <a href="<?= esc($cart['summary']['ready'] ? $cart['urls']['checkout'] : $cart['urls']['cart'], 'attr') ?>" class="btn btn-proceed"<?= $cart['lines'] === [] ? ' hidden' : '' ?>><?= lang('Business.cart.proceed') ?></a>
+                                    <!-- the checkout (the cart checked again first) until a participant's name is missing, then the cart, where it is added -->
+                                    <form method="post" action="<?= esc($cart['urls']['checkout'], 'attr') ?>" class="flyout-checkout"<?= $cart['lines'] === [] || ! $cart['summary']['ready'] ? ' hidden' : '' ?>>
+                                        <?= csrf_field() ?>
+                                        <button type="submit" class="btn btn-proceed w-100"><?= lang('Business.cart.proceed') ?></button>
+                                    </form>
+                                    <a href="<?= esc($cart['urls']['cart'], 'attr') ?>" class="btn btn-proceed flyout-names"<?= $cart['lines'] !== [] && ! $cart['summary']['ready'] ? '' : ' hidden' ?>><?= lang('Business.cart.proceed') ?></a>
                                     <a href="<?= esc($cart['urls']['cart'], 'attr') ?>" class="link-viewbag"><?= lang('Business.cart.view-cart') ?></a>
                                 </div>
                             </div>
@@ -406,13 +418,15 @@
             pick('.subtotal-value').textContent = summary.subtotal;
             pick('.flyout-note').textContent = summary.missing_label;
             pick('.flyout-note').hidden = summary.missing === 0;
-            const proceed = pick('.btn-proceed');
-            proceed.hidden = empty;
-            proceed.href = summary.ready ? urls.checkout : urls.cart;
+            pick('.flyout-checkout').hidden = empty || !summary.ready;
+            pick('.flyout-names').hidden = empty || summary.ready;
             if (Array.isArray(lines)) pick('.flyout-items').replaceChildren(...lines.map(item));
         };
 
-        document.addEventListener('cart:changed', (event) => draw(event.detail.summary, event.detail.lines));
+        document.addEventListener('cart:changed', (event) => {
+            draw(event.detail.summary, event.detail.lines);
+            (event.detail.track || []).forEach(([name, props]) => window.OtternovaTracker.track(name, props));
+        });
 
         root.addEventListener('submit', (event) => {
             const form = event.target.closest('.flyout-remove');

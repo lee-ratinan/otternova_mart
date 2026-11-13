@@ -9,6 +9,9 @@ use RuntimeException;
 
 class Business extends BaseController
 {
+    /** listSupportedSubdivisions() */
+    protected $helpers = ['list'];
+
 
     /**
      * The business's main page as the system builds it, from LINK_INTERNAL_API v1/mart/site (cached by the API): the
@@ -381,23 +384,112 @@ class Business extends BaseController
             'summary'          => $this->cartSummary($businessSlug, $currency, $locale),
             'message'          => session()->getFlashdata('cart_message'),
             'error'            => session()->getFlashdata('cart_error'),
+            'problems'         => session()->getFlashdata('cart_problems') ?? [],
             'urls'             => [
                 'home'     => $base,
                 'update'   => $base . '/update-cart',
                 'remove'   => $base . '/remove-from-cart',
                 'clear'    => $base . '/clear-cart',
-                'checkout' => $base . '/checkout',
+                'checkout' => $base . '/checkout-init',
             ],
         ]);
     }
 
-    public function checkout(string $businessSlug): string
+    /**
+     * The checkout: the customer's details, then how the products get to them (only when there are any), then the
+     * discount code and how to pay, beside what it all costs. Everything is priced by v1/mart/quote, never by the
+     * cart's own prices; a cart that can no longer be had as it is goes back to the cart page, each line with why.
+     * @param string $businessSlug
+     * @return string|ResponseInterface
+     */
+    public function checkout(string $businessSlug): string|ResponseInterface
     {
         $locale = $this->request->getLocale();
-        $data   = [
-            'locale' => $locale,
-        ];
-        return view('checkout', $data);
+        $site   = $this->site($businessSlug, $locale);
+        $lines  = $this->cartLines($businessSlug);
+        if ($lines === []) {
+            return redirect()->to($this->businessUrl($businessSlug, 'cart'));
+        }
+        $state = $this->checkoutState($businessSlug);
+        [$code, $quote] = $this->quoteCart($businessSlug, $lines, $state['choice'], $locale);
+        if ($code !== 200) {
+            return redirect()->to($this->businessUrl($businessSlug, 'cart'))->with('cart_error', lang('Business.cart.try-again'));
+        }
+        if (($back = $this->backToCart($businessSlug, $lines, $quote)) !== null) {
+            return $back;
+        }
+        $this->dropBadDiscount($businessSlug, $quote);
+        $state    = $this->checkoutState($businessSlug);
+        $currency = (string) $site['business']['currency_code'];
+        // a checkout starts once for what the cart holds, however often the page is loaded
+        $events  = [];
+        $cartKey = md5(json_encode(array_map(static fn (array $l): array => [$l['id'], $l['quantity']], $lines)));
+        $started = session()->get('checkout_started') ?? [];
+        if (($started[$businessSlug] ?? null) !== $cartKey) {
+            $started[$businessSlug] = $cartKey;
+            session()->set('checkout_started', $started);
+            $events[] = ['checkout_start', [
+                'items'    => array_sum(array_column($quote['lines'], 'quantity')),
+                'value'    => (float) $quote['totals']['total'],
+                'currency' => (string) $quote['currency'],
+            ]];
+        }
+
+        return view('checkout', $this->layout($site, $businessSlug, $locale) + [
+            'tracker_events'   => $events,
+            'page_title'       => lang('Business.checkout.title'),
+            'business_name'    => $site['business']['name'],
+            'meta_description' => $site['meta']['description'],
+            'meta_keywords'    => $site['meta']['keywords'],
+            'site'             => $site,
+            'state'            => $state,
+            'checkout'         => $this->checkoutView($quote, $lines, $currency, $locale),
+            'errors'           => session()->getFlashdata('checkout_errors') ?? [],
+            'error'            => session()->getFlashdata('checkout_error'),
+            'notices'          => session()->getFlashdata('checkout_notices') ?? [],
+            'urls'             => [
+                'cart'    => $this->businessUrl($businessSlug, 'cart'),
+                'quote'   => $this->businessUrl($businessSlug, 'checkout-quote'),
+                'confirm' => $this->businessUrl($businessSlug, 'checkout-confirm'),
+            ],
+        ]);
+    }
+
+    /**
+     * An order's payment: what to do to pay it, by its payment method's handler (a PromptPay QR with the amount in it,
+     * or the business's instructions), and what was ordered. Only for the browser that placed it, which keeps its key.
+     * @param string $businessSlug
+     * @param string $orderPublicId
+     * @return string
+     */
+    public function payment(string $businessSlug, string $orderPublicId): string
+    {
+        $locale = $this->request->getLocale();
+        $site   = $this->site($businessSlug, $locale);
+        $key    = session()->get('orders')[$businessSlug][$orderPublicId] ?? null;
+        if (! is_string($key)) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+        [$code, $body] = $this->fetchApi('v1/mart/order', ['business_slug' => $businessSlug, 'lang' => $locale, 'public_id' => $orderPublicId, 'key' => $key]);
+        if ($code === 404) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+        if ($code !== 200 || ! is_array($body['data']['order'] ?? null)) {
+            throw new RuntimeException(lang('Business.load-failed'));
+        }
+        $order    = $body['data']['order'];
+        $currency = (string) $order['currency'];
+
+        return view('payment', $this->layout($site, $businessSlug, $locale) + [
+            'page_title'       => lang('Business.payment.title'),
+            'business_name'    => $site['business']['name'],
+            'meta_description' => $site['meta']['description'],
+            'meta_keywords'    => $site['meta']['keywords'],
+            'site'             => $site,
+            'order'            => $this->orderView($order, $currency, $locale),
+            'just_placed'      => session()->getFlashdata('order_placed') === $orderPublicId,
+            'home_url'         => $this->businessUrl($businessSlug, ''),
+        ]);
     }
 
     public function checkOrderStatus(string $businessSlug, string $orderPublicId): string
@@ -464,6 +556,7 @@ class Business extends BaseController
         $locale = $this->request->getLocale();
         $site   = $this->site($businessSlug, $locale);
         $lines  = $this->cartLines($businessSlug);
+        $before = array_column($lines, 'quantity', 'id');
         try {
             $variant = $this->postId('variant');
             if ($this->postText('session') !== '') {
@@ -482,11 +575,19 @@ class Business extends BaseController
         } catch (\DomainException|RuntimeException $e) {
             return $this->cartFailure($businessSlug, $site, $e);
         }
+        $added = $lines[$index]['kind'] === 'P' ? $lines[$index]['quantity'] - ($before[$lines[$index]['id']] ?? 0) : 1;
         $this->saveCart($businessSlug, $lines);
-        $buy = $this->postText('intent') === 'buy';
+        $buy   = $this->postText('intent') === 'buy';
+        $event = ['add_to_cart', [
+            'artifact' => $lines[$index]['artifact'],
+            'variant'  => $lines[$index]['variant'],
+            'quantity' => $added,
+            'value'    => round((float) $lines[$index]['price'] * $added, 2),
+            'currency' => (string) $site['business']['currency_code'],
+        ]];
 
         return $this->cartAnswer($businessSlug, $site, lang('Business.cart.added'), $lines[$index],
-            $buy ? base_url(rawurlencode($businessSlug) . '/checkout') : null);
+            $buy ? base_url(rawurlencode($businessSlug) . '/checkout') : null, [$event]);
     }
 
     /**
@@ -563,14 +664,119 @@ class Business extends BaseController
         return $this->cartAnswer($businessSlug, $site, lang('Business.cart.cleared'));
     }
 
+    /**
+     * The checkout starts: the whole cart is checked again with v1/mart/quote (stock, times, seats, prices) and every
+     * participant must be named; then on to the checkout, else back to the cart with what changed
+     * @param string $businessSlug
+     * @return ResponseInterface
+     */
     public function checkoutInit(string $businessSlug): ResponseInterface
     {
-        return $this->response->setJSON([]);
+        $locale = $this->request->getLocale();
+        $site   = $this->site($businessSlug, $locale);
+        $lines  = $this->cartLines($businessSlug);
+        $cart   = $this->businessUrl($businessSlug, 'cart');
+        if ($lines === []) {
+            return redirect()->to($cart);
+        }
+        $missing = $this->cartSummary($businessSlug, (string) $site['business']['currency_code'], $locale)['missing'];
+        if ($missing > 0) {
+            return redirect()->to($cart)->with('cart_error', lang('Business.cart.names-needed', [$missing]));
+        }
+        [$code, $quote] = $this->quoteCart($businessSlug, $lines, $this->checkoutState($businessSlug)['choice'], $locale);
+        if ($code !== 200) {
+            return redirect()->to($cart)->with('cart_error', lang('Business.cart.try-again'));
+        }
+        if (($back = $this->backToCart($businessSlug, $lines, $quote)) !== null) {
+            return $back;
+        }
+
+        return redirect()->to($this->businessUrl($businessSlug, 'checkout'));
     }
 
+    /**
+     * A change on the checkout page, priced again: shipping, pickup_store, discount, payment (each kept for the page,
+     * as are the customer's details and the address, sent too so a reload keeps them). JSON { ok, checkout, cart_url }:
+     * ok false with cart_url when the cart can no longer be had as it is.
+     * @param string $businessSlug
+     * @return ResponseInterface
+     */
+    public function checkoutQuote(string $businessSlug): ResponseInterface
+    {
+        $locale = $this->request->getLocale();
+        $site   = $this->site($businessSlug, $locale);
+        $lines  = $this->cartLines($businessSlug);
+        $state  = $this->rememberCheckout($businessSlug);
+        [$code, $quote] = $lines === [] ? [200, null] : $this->quoteCart($businessSlug, $lines, $state['choice'], $locale);
+        if ($code !== 200) {
+            return $this->response->setStatusCode(503)->setJSON(['ok' => false, 'message' => lang('Business.cart.try-again')]);
+        }
+        if ($quote === null || $this->backToCart($businessSlug, $lines, $quote) !== null) {
+            return $this->response->setJSON(['ok' => false, 'cart_url' => $this->businessUrl($businessSlug, 'cart')]);
+        }
+        $this->dropBadDiscount($businessSlug, $quote);
+
+        return $this->response->setJSON(['ok' => true, 'checkout' => $this->checkoutView($quote, $lines, (string) $site['business']['currency_code'], $locale)]);
+    }
+
+    /**
+     * Place the order (v1/mart/order) with what the checkout page sent: first_name, last_name, email, telephone;
+     * shipping, pickup_store, line_1, line_2, city, subdivision_code, postal_code, pickup_point; discount; payment.
+     * Placed: the cart is emptied and the browser keeps the order's key, then on to its payment. Not placed: back to
+     * the checkout with why, or to the cart when a line can no longer be had.
+     * @param string $businessSlug
+     * @return ResponseInterface
+     */
     public function checkoutConfirm(string $businessSlug): ResponseInterface
     {
-        return $this->response->setJSON([]);
+        $locale   = $this->request->getLocale();
+        $this->site($businessSlug, $locale);
+        $lines    = $this->cartLines($businessSlug);
+        $back     = $this->businessUrl($businessSlug, 'checkout');
+        if ($lines === []) {
+            return redirect()->to($this->businessUrl($businessSlug, 'cart'));
+        }
+        $state  = $this->rememberCheckout($businessSlug);
+        $errors = $this->checkoutErrors($state);
+        if ($errors !== []) {
+            return redirect()->to($back)->with('checkout_errors', $errors);
+        }
+
+        [$code, $body] = $this->postApi('v1/mart/order', $this->quoteBody($businessSlug, $lines, $state['choice'], $locale, true) + [
+            'customer'     => $state['customer'],
+            'delivery'     => array_diff_key($state['delivery'], ['pickup_point' => true]),
+            'pickup_point' => $state['delivery']['pickup_point'],
+        ]);
+        if ($code === 201 && isset($body['data']['order']['public_id'], $body['data']['order']['key'])) {
+            $order  = $body['data']['order'];
+            $orders = session()->get('orders') ?? [];
+            // the newest few orders of each business, for their payment pages
+            $orders[$businessSlug] = array_slice([$order['public_id'] => $order['key']] + ($orders[$businessSlug] ?? []), 0, 20, true);
+            session()->set('orders', $orders);
+            $this->saveCart($businessSlug, []);
+            $this->forgetCheckout($businessSlug);
+
+            return redirect()->to($this->businessUrl($businessSlug, 'payment/' . rawurlencode($order['public_id'])))
+                ->with('order_placed', $order['public_id'])
+                ->with('tracker_events', [['checkout_confirm', [
+                    'order'    => $order['public_id'],
+                    'items'    => array_sum(array_column($order['lines'], 'quantity')),
+                    'value'    => (float) $order['totals']['total'],
+                    'currency' => (string) $order['currency'],
+                ]]]);
+        }
+        if ($code === 409 && is_array($body['data']['quote'] ?? null)) {
+            if (($body['data']['reason'] ?? '') === 'problems' && ($cart = $this->backToCart($businessSlug, $lines, $body['data']['quote'], true)) !== null) {
+                return $cart;
+            }
+
+            return redirect()->to($back)->with('checkout_errors', $this->apiErrors($body['errors'] ?? []));
+        }
+        if ($code === 422) {
+            return redirect()->to($back)->with('checkout_errors', $this->apiErrors($body['errors'] ?? []));
+        }
+
+        return redirect()->to($back)->with('checkout_error', lang('Business.cart.try-again'));
     }
 
     public function retrieveOrderStatus(string $businessSlug): ResponseInterface
@@ -637,7 +843,7 @@ class Business extends BaseController
         return [
             'lines'   => $this->cartViews($businessSlug, $currency, $locale),
             'summary' => $this->cartSummary($businessSlug, $currency, $locale),
-            'urls'    => ['cart' => $base . '/cart', 'checkout' => $base . '/checkout', 'remove' => $base . '/remove-from-cart'],
+            'urls'    => ['cart' => $base . '/cart', 'checkout' => $base . '/checkout-init', 'remove' => $base . '/remove-from-cart'],
         ];
     }
 
@@ -1238,7 +1444,7 @@ class Business extends BaseController
     /**
      * What a cart endpoint did: JSON to a script, else a redirect (to the cart, or $redirect) with the message
      */
-    private function cartAnswer(string $businessSlug, array $site, string $message, ?array $line = null, ?string $redirect = null): ResponseInterface
+    private function cartAnswer(string $businessSlug, array $site, string $message, ?array $line = null, ?string $redirect = null, array $events = []): ResponseInterface
     {
         $locale   = $this->request->getLocale();
         $currency = (string) $site['business']['currency_code'];
@@ -1250,10 +1456,11 @@ class Business extends BaseController
                 'summary'  => $this->cartSummary($businessSlug, $currency, $locale),
                 'lines'    => $this->cartViews($businessSlug, $currency, $locale),
                 'redirect' => $redirect,
+                'track'    => $events,
             ]);
         }
 
-        return redirect()->to($redirect ?? base_url(rawurlencode($businessSlug) . '/cart'))->with('cart_message', $message);
+        return redirect()->to($redirect ?? base_url(rawurlencode($businessSlug) . '/cart'))->with('cart_message', $message)->with('tracker_events', $events);
     }
 
     /**
@@ -1588,5 +1795,356 @@ class Business extends BaseController
         $formatted = $formatter->formatCurrency($amount, $currency);
 
         return $formatted === false ? $currency . ' ' . number_format($amount, 2) : $formatted;
+    }
+
+    // --- the checkout ---------------------------------------------------------------------------------------------
+
+    /** What the checkout page keeps between requests, per business: the choices, the customer and the address */
+    private const CHECKOUT_FIELDS = [
+        'choice'   => ['shipping' => 32, 'pickup_store' => 32, 'discount' => 30, 'payment' => 32],
+        'customer' => ['first_name' => 100, 'last_name' => 100, 'email' => 64, 'telephone' => 24],
+        'delivery' => ['line_1' => 255, 'line_2' => 255, 'city' => 128, 'subdivision_code' => 8, 'postal_code' => 16, 'pickup_point' => 500],
+    ];
+
+    /** A page of the business */
+    private function businessUrl(string $businessSlug, string $path): string
+    {
+        return base_url(rawurlencode($businessSlug) . ($path === '' ? '' : '/' . $path));
+    }
+
+    /** The checkout as the customer left it, every field there and a text */
+    private function checkoutState(string $businessSlug): array
+    {
+        $stored = session()->get('checkout')[$businessSlug] ?? [];
+        $state  = [];
+        foreach (self::CHECKOUT_FIELDS as $group => $fields) {
+            foreach ($fields as $field => $max) {
+                $value                  = $stored[$group][$field] ?? '';
+                $state[$group][$field] = is_string($value) ? $value : '';
+            }
+        }
+
+        return $state;
+    }
+
+    /** The checkout with what was posted, kept for the next request */
+    private function rememberCheckout(string $businessSlug): array
+    {
+        $state = $this->checkoutState($businessSlug);
+        foreach (self::CHECKOUT_FIELDS as $group => $fields) {
+            foreach ($fields as $field => $max) {
+                $value = $this->request->getPost($field);
+                if (is_string($value)) {
+                    $value = $field === 'pickup_point' ? trim($value) : trim(preg_replace('/\s+/u', ' ', $value));
+                    $state[$group][$field] = mb_substr($value, 0, $max);
+                }
+            }
+        }
+        $all                = session()->get('checkout') ?? [];
+        $all[$businessSlug] = $state;
+        session()->set('checkout', $all);
+
+        return $state;
+    }
+
+    /** A discount code the quote turned down is not kept, so it is not sent with the order; the quote still says why */
+    private function dropBadDiscount(string $businessSlug, array $quote): void
+    {
+        $all = session()->get('checkout') ?? [];
+        if (($quote['discount_error'] ?? null) !== null && isset($all[$businessSlug]['choice']['discount'])) {
+            $all[$businessSlug]['choice']['discount'] = '';
+            session()->set('checkout', $all);
+        }
+    }
+
+    private function forgetCheckout(string $businessSlug): void
+    {
+        $all = session()->get('checkout') ?? [];
+        unset($all[$businessSlug]);
+        session()->set('checkout', $all);
+    }
+
+    /** What the checkout page checks before sending the order: the customer's details */
+    private function checkoutErrors(array $state): array
+    {
+        $errors = [];
+        foreach ($state['customer'] as $field => $value) {
+            if ($value === '') {
+                $errors['customer.' . $field] = lang('Business.checkout.required');
+            }
+        }
+        if ($state['customer']['email'] !== '' && filter_var($state['customer']['email'], FILTER_VALIDATE_EMAIL) === false) {
+            $errors['customer.email'] = lang('Business.checkout.invalid-email');
+        }
+        if ($state['customer']['telephone'] !== '' && ! preg_match('/^\+?[0-9 ()-]{6,24}$/', $state['customer']['telephone'])) {
+            $errors['customer.telephone'] = lang('Business.checkout.invalid-telephone');
+        }
+        if ($state['choice']['payment'] === '') {
+            $errors['payment'] = lang('Business.checkout.payment-required');
+        }
+
+        return $errors;
+    }
+
+    /**
+     * The body of v1/mart/quote and v1/mart/order for the cart
+     * @param bool $withPeople with the names of the participants (for the order)
+     */
+    private function quoteBody(string $businessSlug, array $lines, array $choice, string $locale, bool $withPeople = false): array
+    {
+        return ['business_slug' => $businessSlug, 'lang' => $locale, 'lines' => array_map(static function (array $line) use ($withPeople): array {
+            $out = ['key' => $line['id'], 'kind' => $line['kind'], 'variant' => $line['variant'], 'quantity' => (int) $line['quantity']];
+            if ($line['kind'] === 'A') {
+                $out += ['store' => $line['store'], 'starts_at' => $line['starts_at'], 'staff' => $line['staff']];
+            } elseif ($line['kind'] === 'G') {
+                $out['session'] = $line['session'];
+            }
+            if ($withPeople && $line['kind'] !== 'P') {
+                $out['participants'] = $line['participants'];
+            }
+
+            return $out;
+        }, $lines)] + $choice;
+    }
+
+    /**
+     * v1/mart/quote for the cart
+     * @return array{int, array|null} [http status, the quote]
+     */
+    private function quoteCart(string $businessSlug, array $lines, array $choice, string $locale): array
+    {
+        [$code, $body] = $this->postApi('v1/mart/quote', $this->quoteBody($businessSlug, $lines, $choice, $locale));
+        if ($code !== 200 || ! is_array($body['data']['lines'] ?? null)) {
+            return [$code === 200 ? 503 : $code, null];
+        }
+
+        return [200, $body['data']];
+    }
+
+    /**
+     * The cart brought in line with a quote: each line's price as it is now (the checkout told of a change). When a
+     * line can no longer be had as it is, or the products cannot be sent at all, the redirect to the cart that says
+     * why; null when the checkout can go on.
+     * @param bool $placing The order was refused as it was placed: the cart page says so
+     */
+    private function backToCart(string $businessSlug, array $lines, array $quote, bool $placing = false): ?ResponseInterface
+    {
+        $byKey    = array_column($quote['lines'], null, 'key');
+        $problems = [];
+        $notices  = [];
+        $changed  = false;
+        foreach ($lines as &$line) {
+            $priced = $byKey[$line['id']] ?? null;
+            if ($priced === null) {
+                continue;
+            }
+            if ($priced['problem'] !== null) {
+                $problems[$line['id']] = $this->problemMessage($priced['problem']);
+            }
+            if ((float) $priced['unit_price'] !== (float) $line['price'] || ($priced['compare_price'] === null) !== ($line['compare'] === null)) {
+                $line['price']   = $priced['unit_price'];
+                $line['compare'] = $priced['compare_price'];
+                $changed         = true;
+                $notices[]       = lang('Business.checkout.price-changed', [$line['name']]);
+            }
+        }
+        unset($line);
+        if ($changed) {
+            $this->saveCart($businessSlug, $lines);
+        }
+        if ($problems === [] && ($quote['shipping_error'] ?? null) !== 'none') {
+            if ($notices !== []) {
+                session()->setFlashdata('checkout_notices', $notices);
+            }
+
+            return null;
+        }
+
+        return redirect()->to($this->businessUrl($businessSlug, 'cart'))
+            ->with('cart_problems', $problems)
+            ->with('cart_error', $problems === [] ? lang('Business.checkout.no-shipping') : lang($placing ? 'Business.checkout.changed-placing' : 'Business.checkout.changed'));
+    }
+
+    /** Why a line of the cart can no longer be had, from v1/mart/quote's problem */
+    private function problemMessage(array $problem): string
+    {
+        $available = (int) ($problem['available'] ?? 0);
+
+        return match ($problem['code'] ?? '') {
+            'out_of_stock' => lang('Business.cart.out-of-stock'),
+            'only_left'    => lang('Business.cart.only-left', [$available]),
+            'slot_taken'   => lang('Business.cart.slot-taken'),
+            'session_gone' => lang('Business.cart.session-gone'),
+            'seats_left'   => $available > 0 ? lang('Business.cart.seats-left', [$available]) : lang('Business.cart.session-full'),
+            'session_full' => lang('Business.cart.session-full'),
+            default        => lang('Business.cart.not-found'),
+        };
+    }
+
+    /** v1/mart/order's errors (field => code) as the checkout page shows them */
+    private function apiErrors(array $errors): array
+    {
+        $out = [];
+        foreach ($errors as $field => $code) {
+            $field = (string) $field;
+            $code  = (string) $code;
+            if (str_starts_with($field, 'lines.') && str_ends_with($field, '.participants')) {
+                $out['lines'] = lang('Business.checkout.names-missing');
+            } elseif (str_starts_with($field, 'lines.')) {
+                $out['lines'] = lang('Business.checkout.changed');
+            } elseif ($field === 'shipping') {
+                $out['shipping'] = $this->shippingError($code);
+            } elseif ($field === 'discount') {
+                $out['discount'] = $this->discountError(['code' => $code]);
+            } elseif ($field === 'payment') {
+                $out['payment'] = lang('Business.checkout.payment-required');
+            } else {
+                $out[$field] = $code === 'required' ? lang('Business.checkout.required') : lang('Business.checkout.invalid');
+            }
+        }
+
+        return $out;
+    }
+
+    private function shippingError(?string $code): ?string
+    {
+        return match ($code) {
+            null            => null,
+            'pickup_store'  => lang('Business.checkout.pickup-store-required'),
+            'stock'         => lang('Business.checkout.unavailable-stock'),
+            'weight'        => lang('Business.checkout.unavailable-weight'),
+            'none'          => lang('Business.checkout.no-shipping'),
+            default         => lang('Business.checkout.shipping-required'),
+        };
+    }
+
+    private function discountError(?array $error, string $currency = '', string $locale = ''): ?string
+    {
+        return match ($error['code'] ?? null) {
+            null             => null,
+            'expired'        => lang('Business.checkout.discount-expired'),
+            'used_up'        => lang('Business.checkout.discount-used-up'),
+            'not_applicable' => lang('Business.checkout.discount-not-applicable'),
+            'min_subtotal'   => lang('Business.checkout.discount-min', [$currency === '' ? (string) $error['amount'] : $this->money((float) $error['amount'], $currency, $locale)]),
+            default          => lang('Business.checkout.discount-not-found'),
+        };
+    }
+
+    /**
+     * v1/mart/quote as the checkout page shows it
+     * @return array{lines: list<array>, needs_shipping: bool, shipping_methods: list<array>, shipping: string,
+     *               pickup_store: string, shipping_error: string|null, discount: array|null, discount_error: string|null,
+     *               payment_methods: list<array>, payment: string, totals: array}
+     */
+    private function checkoutView(array $quote, array $lines, string $currency, string $locale): array
+    {
+        $money  = fn (string $amount): string => $this->money((float) $amount, $currency, $locale);
+        $images = array_column($lines, 'image', 'id');
+        $totals = $quote['totals'];
+
+        return [
+            'lines' => array_map(fn (array $line): array => [
+                'id'       => $line['key'],
+                'kind'     => $line['kind'],
+                'name'     => $line['name'],
+                'label'    => $line['label'],
+                'image'    => $images[$line['key']] ?? null,
+                'quantity' => $line['quantity'],
+                'total'    => $money($line['subtotal']),
+                'when'     => $line['starts_at'] === null ? null : $this->span($line['starts_at'], $line['ends_at'], $locale),
+                'store'    => $line['kind'] === 'P' ? null : ($line['store']['name'] ?? null),
+            ], $quote['lines']),
+            'needs_shipping'   => (bool) $quote['needs_shipping'],
+            'shipping_methods' => array_map(fn (array $m): array => [
+                'public_id'     => $m['public_id'],
+                'type'          => $m['type'],
+                'name'          => $m['name'],
+                'description'   => $m['description'],
+                'eta'           => $m['eta_days_max'] === null ? null : lang('Business.checkout.eta', [$m['eta_days_min'] ?? $m['eta_days_max'], $m['eta_days_max']]),
+                'fee'           => (float) $m['fee'] === 0.0 ? lang('Business.checkout.free') : $money($m['fee']),
+                'available'     => $m['available'],
+                'unavailable'   => $m['available'] ? null : $this->shippingError($m['unavailable']),
+                'store'         => $m['store']['name'] ?? null,
+                'pickup_stores' => $m['pickup_stores'] === null ? null : array_map(fn (array $store): array => [
+                    'public_id' => $store['public_id'],
+                    'name'      => $store['name'],
+                    'address'   => implode(', ', array_filter([$store['address']['line_1'] ?? null, $store['address']['line_2'] ?? null, $store['address']['city'] ?? null])),
+                ], $m['pickup_stores']),
+            ], $quote['shipping_methods']),
+            'shipping'        => $quote['shipping']['public_id'] ?? '',
+            'shipping_type'   => $quote['shipping']['type'] ?? null,
+            'pickup_store'    => $quote['shipping']['pickup_store']['public_id'] ?? '',
+            'shipping_error'  => in_array($quote['shipping_error'] ?? null, [null, 'none'], true) ? null : $this->shippingError($quote['shipping_error']),
+            'discount'        => $quote['discount'] === null ? null : [
+                'code'        => $quote['discount']['code'],
+                'description' => $quote['discount']['description'],
+                'amount'      => $money($quote['discount']['amount']),
+            ],
+            'discount_error'  => $this->discountError($quote['discount_error'], $currency, $locale),
+            'payment_methods' => array_map(static fn (array $p): array => [
+                'public_id'   => $p['public_id'],
+                'name'        => $p['name'],
+                'handler'     => $p['handler_code'],
+                'instruction' => $p['instruction'],
+            ], $quote['payment_methods']),
+            'payment' => $quote['payment'] ?? '',
+            'totals'  => [
+                'items'        => lang('Business.cart.items', [array_sum(array_column($quote['lines'], 'quantity'))]),
+                'subtotal'     => $money($totals['subtotal']),
+                'discount'     => (float) $totals['discount'] > 0 ? '−' . $money($totals['discount']) : null,
+                'shipping'     => ! $quote['needs_shipping'] ? null
+                    : ($quote['shipping'] === null ? lang('Business.checkout.shipping-choose') : ((float) $totals['shipping'] === 0.0 ? lang('Business.checkout.free') : $money($totals['shipping']))),
+                'tax_added'    => (float) $totals['tax_added'] > 0 ? $money($totals['tax_added']) : null,
+                'tax_included' => (float) $totals['tax_included'] > 0 ? lang('Business.checkout.tax-included', [$money($totals['tax_included'])]) : null,
+                'total'        => $money($totals['total']),
+            ],
+        ];
+    }
+
+    /** v1/mart/order's order as the payment page shows it */
+    private function orderView(array $order, string $currency, string $locale): array
+    {
+        $money    = fn (?string $amount): string => $this->money((float) $amount, $currency, $locale);
+        $totals   = $order['totals'];
+        $shipping = $order['shipping'];
+        $address  = static fn (?array $a): ?string => $a === null ? null : implode(', ', array_filter([$a['line_1'] ?? null, $a['line_2'] ?? null, $a['city'] ?? null,
+            isset($a['subdivision_code']) ? (listSupportedSubdivisions(substr((string) $a['subdivision_code'], 0, 2))[$a['subdivision_code']] ?? $a['subdivision_code']) : null,
+            $a['postal_code'] ?? null], static fn ($part): bool => $part !== null && $part !== ''));
+
+        return [
+            'public_id' => $order['public_id'],
+            'status'    => $order['status'],
+            'customer'  => $order['customer'],
+            'lines'     => array_map(fn (array $line): array => [
+                'kind'         => $line['kind'],
+                'name'         => $line['name'],
+                'label'        => $line['label'],
+                'quantity'     => $line['quantity'],
+                'total'        => $money($line['total']),
+                'when'         => $line['starts_at'] === null ? null : $this->span($line['starts_at'], $line['ends_at'], $locale),
+                'store'        => $line['kind'] === 'P' ? null : ($line['store']['name'] ?? null),
+                'participants' => $line['participants'],
+            ], $order['lines']),
+            'shipping'  => $shipping === null ? null : [
+                'type'    => $shipping['type'],
+                'name'    => $shipping['name'],
+                'where'   => match ($shipping['type']) {
+                    'H'     => $address($shipping['address']),
+                    'L'     => $shipping['pickup_point'],
+                    default => $shipping['pickup_store'] === null ? null : trim($shipping['pickup_store']['name'] . ', ' . $address($shipping['pickup_store']['address']), ', '),
+                },
+            ],
+            'payment'   => $order['payment'],
+            'discount_code' => $order['discount_code'],
+            'totals'    => [
+                'subtotal'     => $money($totals['subtotal']),
+                'discount'     => (float) $totals['discount'] > 0 ? '−' . $money($totals['discount']) : null,
+                'shipping'     => $shipping === null ? null : ((float) $totals['shipping'] === 0.0 ? lang('Business.checkout.free') : $money($totals['shipping'])),
+                'tax_added'    => (float) $totals['tax_added'] > 0 ? $money($totals['tax_added']) : null,
+                'tax_included' => (float) $totals['tax_included'] > 0 ? lang('Business.checkout.tax-included', [$money($totals['tax_included'])]) : null,
+                'total'        => $money($totals['total']),
+                'total_number' => $totals['total'],
+            ],
+        ];
     }
 }

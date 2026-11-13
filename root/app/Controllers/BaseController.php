@@ -57,14 +57,30 @@ abstract class BaseController extends Controller
      */
     protected function fetchApi(string $endpoint, array $query): array
     {
+        return $this->callApi('GET', $endpoint, ['query' => $query]);
+    }
+
+    /**
+     * POST JSON to a public endpoint of LINK_INTERNAL_API, such as v1/mart/order
+     * @param string $endpoint
+     * @param array  $body
+     * @return array{int, array} as fetchApi()
+     */
+    protected function postApi(string $endpoint, array $body): array
+    {
+        return $this->callApi('POST', $endpoint, ['json' => $body]);
+    }
+
+    /** @return array{int, array} as fetchApi() */
+    private function callApi(string $method, string $endpoint, array $options): array
+    {
         try {
-            $response = service('curlrequest')->get(getenv('LINK_INTERNAL_API') . $endpoint, [
-                'query'       => $query,
+            $response = service('curlrequest')->request($method, getenv('LINK_INTERNAL_API') . $endpoint, $options + [
                 'headers'     => [
                     'Accept'          => 'application/json',
                     'Accept-Language' => $this->request->getLocale(),
                 ],
-                'timeout'     => 10,
+                'timeout'     => 15,
                 'http_errors' => false,
             ]);
             $code = $response->getStatusCode();
