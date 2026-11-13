@@ -53,7 +53,7 @@ $status   = ['P' => ['warning', 'hourglass-split'], 'C' => ['success', 'check-ci
                         <div class="d-flex justify-content-between align-items-start gap-3 mb-3">
                             <div>
                                 <div class="note"><?= lang('Business.payment.number') ?></div>
-                                <div class="order-number"><?= esc($order['public_id']) ?></div>
+                                <div class="order-number"><?= esc($order['number']) ?></div>
                             </div>
                             <span class="badge text-bg-<?= $status[0] ?>"><i class="bi bi-<?= $status[1] ?>"></i> <?= lang('Business.payment.status-' . $order['status']) ?></span>
                         </div>

@@ -459,18 +459,18 @@ class Business extends BaseController
      * An order's payment: what to do to pay it, by its payment method's handler (a PromptPay QR with the amount in it,
      * or the business's instructions), and what was ordered. Only for the browser that placed it, which keeps its key.
      * @param string $businessSlug
-     * @param string $orderPublicId
+     * @param string $orderNumber the business's number of the order (IN2611-0001); its public_id is never shown
      * @return string
      */
-    public function payment(string $businessSlug, string $orderPublicId): string
+    public function payment(string $businessSlug, string $orderNumber): string
     {
         $locale = $this->request->getLocale();
         $site   = $this->site($businessSlug, $locale);
-        $key    = session()->get('orders')[$businessSlug][$orderPublicId] ?? null;
+        $key    = session()->get('orders')[$businessSlug][$orderNumber] ?? null;
         if (! is_string($key)) {
             throw PageNotFoundException::forPageNotFound();
         }
-        [$code, $body] = $this->fetchApi('v1/mart/order', ['business_slug' => $businessSlug, 'lang' => $locale, 'public_id' => $orderPublicId, 'key' => $key]);
+        [$code, $body] = $this->fetchApi('v1/mart/order', ['business_slug' => $businessSlug, 'lang' => $locale, 'number' => $orderNumber, 'key' => $key]);
         if ($code === 404) {
             throw PageNotFoundException::forPageNotFound();
         }
@@ -487,7 +487,7 @@ class Business extends BaseController
             'meta_keywords'    => $site['meta']['keywords'],
             'site'             => $site,
             'order'            => $this->orderView($order, $currency, $locale),
-            'just_placed'      => session()->getFlashdata('order_placed') === $orderPublicId,
+            'just_placed'      => session()->getFlashdata('order_placed') === $orderNumber,
             'home_url'         => $this->businessUrl($businessSlug, ''),
         ]);
     }
@@ -747,19 +747,20 @@ class Business extends BaseController
             'delivery'     => array_diff_key($state['delivery'], ['pickup_point' => true]),
             'pickup_point' => $state['delivery']['pickup_point'],
         ]);
-        if ($code === 201 && isset($body['data']['order']['public_id'], $body['data']['order']['key'])) {
+        if ($code === 201 && isset($body['data']['order']['order_number'], $body['data']['order']['key'])) {
             $order  = $body['data']['order'];
             $orders = session()->get('orders') ?? [];
             // the newest few orders of each business, for their payment pages
-            $orders[$businessSlug] = array_slice([$order['public_id'] => $order['key']] + ($orders[$businessSlug] ?? []), 0, 20, true);
+            // by the order number, the only one the customer sees
+            $orders[$businessSlug] = array_slice([$order['order_number'] => $order['key']] + ($orders[$businessSlug] ?? []), 0, 20, true);
             session()->set('orders', $orders);
             $this->saveCart($businessSlug, []);
             $this->forgetCheckout($businessSlug);
 
-            return redirect()->to($this->businessUrl($businessSlug, 'payment/' . rawurlencode($order['public_id'])))
-                ->with('order_placed', $order['public_id'])
+            return redirect()->to($this->businessUrl($businessSlug, 'payment/' . rawurlencode($order['order_number'])))
+                ->with('order_placed', $order['order_number'])
                 ->with('tracker_events', [['checkout_confirm', [
-                    'order'    => $order['public_id'],
+                    'order'    => $order['order_number'],
                     'items'    => array_sum(array_column($order['lines'], 'quantity')),
                     'value'    => (float) $order['totals']['total'],
                     'currency' => (string) $order['currency'],
@@ -2112,7 +2113,7 @@ class Business extends BaseController
             $a['postal_code'] ?? null], static fn ($part): bool => $part !== null && $part !== ''));
 
         return [
-            'public_id' => $order['public_id'],
+            'number'    => $order['order_number'],
             'status'    => $order['status'],
             'customer'  => $order['customer'],
             'lines'     => array_map(fn (array $line): array => [
