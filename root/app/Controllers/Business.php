@@ -42,14 +42,50 @@ class Business extends BaseController
         ]);
     }
 
-    public function productInfo(string $businessSlug, string $artifactPublicId): string
+    /**
+     * A product's page, from LINK_INTERNAL_API v1/mart/artifact: its pictures, details, options, specifications and
+     * reviews, and the buttons that put the chosen variant in the cart (POST /{business}/add-to-cart) or buy it at once.
+     * A service's public_id is sent to its own page.
+     * @param string $businessSlug
+     * @param string $artifactPublicId
+     * @return string|ResponseInterface
+     */
+    public function productInfo(string $businessSlug, string $artifactPublicId): string|ResponseInterface
     {
         $locale = $this->request->getLocale();
-        $data   = [
-            'locale' => $locale,
-            'page_title' => '[product name]'
-        ];
-        return view('productInfo', $data);
+        $site   = $this->site($businessSlug, $locale);
+        [$code, $body] = $this->fetchApi('v1/mart/artifact', ['business_slug' => $businessSlug, 'public_id' => $artifactPublicId, 'lang' => $locale]);
+        if ($code === 404 || $code === 400) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+        if ($code !== 200 || ! is_array($body['data'] ?? null)) {
+            throw new RuntimeException(lang('Business.load-failed'));
+        }
+        $data     = $body['data'];
+        $artifact = $data['artifact'];
+        if ($artifact['type'] === 'S') {
+            return redirect()->to(base_url(rawurlencode($businessSlug) . '/service/' . rawurlencode($artifact['public_id'])), 301);
+        }
+        $currency = (string) $site['business']['currency_code'];
+        $variants = $this->productVariants($data, $currency, $locale);
+        $plain    = trim(preg_replace('/\s+/u', ' ', (string) ($artifact['description'] ?? '')));
+
+        return view('productInfo', $this->layout($site, $businessSlug, $locale) + [
+            'page_title'       => $artifact['name'],
+            'business_name'    => $site['business']['name'],
+            'meta_description' => $plain !== '' ? mb_strimwidth($plain, 0, 160, '…') : $site['meta']['description'],
+            'meta_keywords'    => $site['meta']['keywords'],
+            'site'             => $site,
+            'artifact'         => $artifact,
+            'summary'          => mb_strlen($plain) > self::SUMMARY_LENGTH ? mb_strimwidth($plain, 0, self::SUMMARY_LENGTH, '…') : $plain,
+            'summary_cut'      => mb_strlen($plain) > self::SUMMARY_LENGTH,
+            'images'           => $data['images'],
+            'options'          => $data['options'],
+            'variants'         => $variants,
+            'reviews'          => array_map(fn (array $review): array => $review + ['date' => $this->date((string) $review['created_at'], $locale)], $data['reviews']),
+            'add_to_cart_url'  => base_url(rawurlencode($businessSlug) . '/add-to-cart'),
+            'checkout_url'     => base_url(rawurlencode($businessSlug) . '/checkout'),
+        ]);
     }
 
     /**
@@ -515,6 +551,80 @@ class Business extends BaseController
                 'details'      => $details,
                 'search_url'   => base_url(rawurlencode($businessSlug) . '/' . ($group ? 'search-sessions' : 'search-slots')) . '?variant=' . rawurlencode($variant['public_id']),
                 'search_label' => lang($group ? 'Business.service.search-sessions' : 'Business.service.search-slots'),
+                'image'        => $images[$variant['public_id']] ?? null,
+            ];
+        }, $data['variants']);
+    }
+
+    /** Stock at or below which the page says how many are left */
+    private const LOW_STOCK = 5;
+
+    /** Most of a variant a customer can put in the cart at once when no store keeps count of it */
+    private const MAX_QUANTITY = 99;
+
+    /**
+     * The active variants of a product as the page's picker uses them, in their order
+     * @param array  $data     v1/mart/artifact
+     * @param string $currency
+     * @param string $locale
+     * @return list<array{public_id: string, values: array<string, string>, label: string, price: string,
+     *               compare: string|null, save: string|null, discount: int|null, sku: string|null,
+     *               weight: string|null, stock: int|null, max: int, status: string, status_class: string,
+     *               image: string|null}>
+     */
+    private function productVariants(array $data, string $currency, string $locale): array
+    {
+        $images = [];
+        foreach ($data['images'] as $image) {
+            if ($image['variant_public_id'] !== null) {
+                $images[$image['variant_public_id']] ??= $image['url'];
+            }
+        }
+        $valueNames = [];
+        foreach ($data['options'] as $option) {
+            foreach ($option['values'] as $value) {
+                $valueNames[$value['public_id']] = $value['value'];
+            }
+        }
+        $number = new NumberFormatter($locale, NumberFormatter::DECIMAL);
+
+        return array_map(function (array $variant) use ($currency, $locale, $images, $valueNames, $number): array {
+            $active  = (float) $variant['price']['active'];
+            $compare = $variant['price']['compare'] === null ? null : (float) $variant['price']['compare'];
+            $onSale  = $compare !== null && $compare > $active;
+            // null: no store keeps count, so it is never out of stock
+            $stock   = $variant['stock'] === null ? null : max(0, (int) $variant['stock']);
+            $weight  = $variant['weight_grams'] === null ? null : (int) $variant['weight_grams'];
+            $values  = [];
+            foreach ($variant['attribute_values'] as $pair) {
+                $values[$pair['attribute_public_id']] = $pair['value_public_id'];
+            }
+            $names = array_values(array_filter(array_map(static fn (string $id): ?string => $valueNames[$id] ?? null, $values)));
+            if ($stock === 0) {
+                [$status, $class] = [lang('Business.product.out-of-stock'), 'out'];
+            } elseif ($stock !== null && $stock <= self::LOW_STOCK) {
+                [$status, $class] = [lang('Business.product.low-stock', [$stock]), 'low'];
+            } else {
+                [$status, $class] = [lang('Business.product.in-stock'), 'in'];
+            }
+
+            return [
+                'public_id'    => $variant['public_id'],
+                'values'       => $values,
+                // for a product whose variants have no options to tell them apart
+                'label'        => $names !== [] ? implode(' · ', $names) : ($variant['sku'] ?? $this->money($active, $currency, $locale)),
+                'price'        => $this->money($active, $currency, $locale),
+                'compare'      => $onSale ? $this->money($compare, $currency, $locale) : null,
+                'save'         => $onSale ? lang('Business.service.save', [$this->money($compare - $active, $currency, $locale)]) : null,
+                'discount'     => $onSale ? (int) round(100 * ($compare - $active) / $compare) : null,
+                'sku'          => $variant['sku'] ?: null,
+                'weight'       => $weight === null ? null : ($weight < 1000
+                    ? lang('Business.product.grams', [$number->format($weight)])
+                    : lang('Business.product.kilograms', [$number->format(round($weight / 1000, 2))])),
+                'stock'        => $stock,
+                'max'          => $stock ?? self::MAX_QUANTITY,
+                'status'       => $status,
+                'status_class' => $class,
                 'image'        => $images[$variant['public_id']] ?? null,
             ];
         }, $data['variants']);
