@@ -51,9 +51,6 @@ $stars = static function (float $average): string {
             <nav class="breadcrumbs">
                 <ol>
                     <li><a href="<?= esc($homeUrl, 'attr') ?>"><?= esc($business['name']) ?></a></li>
-                    <?php if ($artifact['category'] !== null): ?>
-                        <li><?= esc($artifact['category']['name']) ?></li>
-                    <?php endif ?>
                     <li class="current"><?= esc($artifact['name']) ?></li>
                 </ol>
             </nav>

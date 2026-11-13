@@ -97,20 +97,121 @@ class Business extends BaseController
         ]);
     }
 
+    /**
+     * The sessions of a group service (a variant with booking type G) a customer can book, from LINK_INTERNAL_API
+     * v1/mart/sessions: open ones with a seat left whose booking has not closed. A customer books a whole session,
+     * every meeting of it. The page is driven by its query string, so a customer can change any part of it and share
+     * the link:
+     * - variant:   the variant's public_id (required)
+     * - store:     a store's public_id; every store when not given
+     * - staff:     a person's public_id; anyone when not given
+     * - date_from, date_to: Y-m-d, the days a session starts on (one lasting days is found by its first)
+     * A filter the API turns down is dropped and said why.
+     * @param string $businessSlug
+     * @return string
+     */
     public function serviceSessions(string $businessSlug): string
     {
-        $locale           = $this->request->getLocale();
-        $artifactPublicId = $this->request->getGet('variant');
+        $locale = $this->request->getLocale();
         $site   = $this->site($businessSlug, $locale);
-        $data             = [
-            'locale' => $locale,
-            'page_title' => '[search sessions] - ' . $artifactPublicId,
-            'meta_description' => '',
-            'meta_keywords'    => '',
+        $query  = ['business_slug' => $businessSlug, 'lang' => $locale, 'variant' => (string) $this->request->getGet('variant')];
+        foreach (['store', 'staff', 'date_from', 'date_to'] as $name) {
+            $value = $this->request->getGet($name);
+            if (is_string($value) && trim($value) !== '') {
+                $query[$name] = trim($value);
+            }
+        }
+        [$code, $body] = $this->fetchApi('v1/mart/sessions', $query);
+        $notice        = null;
+        if ($code === 422) {
+            $errors = is_array($body['errors'] ?? null) ? $body['errors'] : [];
+            $notice = implode(' ', array_map('strval', $errors));
+            // a person of another store goes with the store
+            $query = array_diff_key($query, $errors + (isset($errors['store']) ? ['staff' => true] : []));
+            [$code, $body] = $this->fetchApi('v1/mart/sessions', $query);
+        }
+        if ($code === 404 || $code === 400 || $code === 422) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+        if ($code !== 200 || ! is_array($body['data'] ?? null)) {
+            throw new RuntimeException(lang('Business.load-failed'));
+        }
+
+        $data     = $body['data'];
+        $service  = $data['service'];
+        $variant  = $service['variant'];
+        $currency = (string) $site['business']['currency_code'];
+        $stores   = [];
+        foreach ($data['stores'] as $store) {
+            $stores[$store['public_id']] = $store + ['address_text' => $this->address($store)];
+        }
+        $staff = [];
+        foreach ($data['staff'] as $person) {
+            $staff[$person['public_id']] = $person + ['restriction_lines' => $this->restrictionLines($person['restrictions'])];
+        }
+        $store   = isset($query['store'], $stores[$query['store']]) ? $stores[$query['store']] : null;
+        $chosen  = isset($query['staff'], $staff[$query['staff']]) ? $staff[$query['staff']] : null;
+        $filters = ['variant' => $variant['public_id'], 'store' => $store['public_id'] ?? null, 'staff' => $chosen['public_id'] ?? null,
+            'date_from' => $query['date_from'] ?? null, 'date_to' => $query['date_to'] ?? null];
+        $url     = static fn (array $change): string => base_url(rawurlencode($businessSlug) . '/search-sessions') . '?'
+            . http_build_query(array_filter(array_merge($filters, $change), static fn ($value): bool => $value !== null && $value !== ''));
+        $price   = $variant['price'] ?? null;
+        $details = [];
+        if ($variant['duration_minutes'] !== null) {
+            $details[] = lang('Business.service.minutes', [(int) $variant['duration_minutes']]);
+        }
+        if ($variant['capacity'] !== null) {
+            $details[] = lang('Business.sessions.capacity', [(int) $variant['capacity']]);
+        }
+
+        $sessions = [];
+        foreach ($data['sessions'] as $session) {
+            $place      = $stores[$session['store_public_id']] ?? null;
+            $sessions[] = [
+                'public_id'       => $session['public_id'],
+                'name'            => $session['name'],
+                'description'     => $session['description'],
+                'dates'           => $this->span($session['starts_at'], $session['ends_at'], $locale),
+                'closes'          => $this->moment($session['booking_closes_at'], $locale),
+                'seats_available' => (int) $session['seats_available'],
+                'capacity'        => (int) $session['capacity'],
+                'store'           => $place === null ? null : ['public_id' => $place['public_id'], 'name' => $place['name'], 'address' => $place['address_text'],
+                    'phone_number' => $place['phone_number']],
+                'staff'           => array_values(array_map(static fn (string $id): array => ['name' => $staff[$id]['name'], 'restrictions' => $staff[$id]['restriction_lines']],
+                    array_filter($session['staff'], static fn (string $id): bool => isset($staff[$id])))),
+                'slots'           => array_map(fn (array $slot): array => [
+                    'number' => (int) $slot['slot_number'],
+                    'when'   => $this->span($slot['starts_at'], $slot['ends_at'], $locale),
+                    'staff'  => implode(', ', array_filter(array_map(static fn (string $id): ?string => $staff[$id]['name'] ?? null, $slot['staff']))),
+                ], $session['slots']),
+            ];
+        }
+
+        return view('serviceSessions', $this->layout($site, $businessSlug, $locale) + [
+            'page_title'       => lang('Business.slots.title', [$service['name']]),
+            'business_name'    => $site['business']['name'],
+            'meta_description' => $site['meta']['description'],
+            'meta_keywords'    => $site['meta']['keywords'],
             'site'             => $site,
-            'css' => listDefaultThemeVariables()
-        ];
-        return view('serviceSessions', $data);
+            'service'          => $service + [
+                'url'     => base_url(rawurlencode($businessSlug) . '/service/' . rawurlencode($service['public_id'])),
+                'label'   => $variant['label'],
+                'details' => $details,
+                'price'   => $price === null ? null : $this->money((float) $price['active'], $currency, $locale),
+                'compare' => $price !== null && $price['compare'] !== null && (float) $price['compare'] > (float) $price['active']
+                    ? $this->money((float) $price['compare'], $currency, $locale) : null,
+            ],
+            'variant'          => $variant,
+            'stores'           => array_values($stores),
+            'store'            => $store,
+            'staff'            => array_values($staff),
+            'chosen_staff'     => $chosen,
+            'date_from'        => $query['date_from'] ?? null,
+            'date_to'          => $query['date_to'] ?? null,
+            'sessions'         => $sessions,
+            'notice'           => $notice,
+            'url'              => $url,
+        ]);
     }
 
     /**
@@ -630,6 +731,38 @@ class Business extends BaseController
             'first'    => $window['first_date'],
             'last'     => $window['last_date'],
         ];
+    }
+
+    /**
+     * When something runs, from two ISO 8601 datetimes with the store's offset, on the store's clock: "Fri 20 Nov 2026,
+     * 09:00–12:00" on one day, "Wed 18 Nov 2026, 09:00 – Wed 25 Nov 2026, 12:00" across days
+     */
+    private function span(string $startsAt, ?string $endsAt, string $locale): string
+    {
+        $start = new \DateTimeImmutable($startsAt);
+        $from  = $this->clock($start, $locale, 'EEE d MMM y, HH:mm');
+        if ($endsAt === null) {
+            return $from;
+        }
+        $end = new \DateTimeImmutable($endsAt);
+
+        return $start->format('Y-m-d') === $end->format('Y-m-d')
+            ? $from . '–' . $end->format('H:i')
+            : $from . ' – ' . $this->clock($end, $locale, 'EEE d MMM y, HH:mm');
+    }
+
+    /** An ISO 8601 datetime with the store's offset, in words on the store's clock */
+    private function moment(?string $at, string $locale): ?string
+    {
+        return $at === null ? null : $this->clock(new \DateTimeImmutable($at), $locale, 'EEE d MMM y, HH:mm');
+    }
+
+    /** A moment by an ICU pattern, at its own offset */
+    private function clock(\DateTimeImmutable $at, string $locale, string $pattern): string
+    {
+        $formatter = new \IntlDateFormatter($locale, \IntlDateFormatter::NONE, \IntlDateFormatter::NONE, $at->getTimezone(), null, $pattern);
+
+        return (string) $formatter->format($at);
     }
 
     /** A Y-m-d date in the locale's words, by an ICU pattern ("EEE": Mon) */

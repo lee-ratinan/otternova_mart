@@ -103,7 +103,6 @@ $names    = static fn (array $people): string => implode(', ', array_column($peo
     </div>
     <div class="container slot-search">
         <div class="row">
-
             <div class="col-lg-4 sidebar order-2 order-lg-1">
                 <div class="widgets-container">
                     <!-- The service being booked -->
