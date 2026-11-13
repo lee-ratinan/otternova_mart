@@ -106,82 +106,72 @@
                             </div>
                         </div>
 
+                        <?php if (isset($cart)): ?>
                         <!-- Cart -->
-                        <div class="dropdown">
-                            <button class="action-btn" data-bs-toggle="dropdown" aria-label="Cart">
+                        <div class="dropdown" id="header-cart">
+                            <button class="action-btn" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-label="<?= esc(lang('Business.cart.open', [$cart['summary']['items_label']]), 'attr') ?>">
                                 <i class="bi bi-bag"></i>
-                                <span class="badge-count">3</span>
+                                <span class="badge-count"<?= $cart['summary']['items'] > 0 ? '' : ' hidden' ?>><?= $cart['summary']['items'] > 99 ? '99+' : $cart['summary']['items'] ?></span>
                             </button>
                             <div class="dropdown-menu cart-flyout">
                                 <div class="flyout-top">
-                                    <h6>Your Bag</h6>
-                                    <span class="items-label">3 items</span>
+                                    <h6><?= lang('Business.cart.flyout-title') ?></h6>
+                                    <span class="items-label"><?= esc($cart['summary']['items_label']) ?></span>
                                 </div>
+                                <p class="flyout-empty"<?= $cart['lines'] === [] ? '' : ' hidden' ?>><?= lang('Business.cart.empty') ?></p>
+                                <template id="header-cart-remove">
+                                    <form method="post" action="<?= esc($cart['urls']['remove'], 'attr') ?>" class="flyout-remove">
+                                        <?= csrf_field() ?>
+                                        <input type="hidden" name="line" value="">
+                                        <button type="submit" class="item-dismiss"><i class="bi bi-trash3"></i></button>
+                                    </form>
+                                </template>
                                 <div class="flyout-items">
-                                    <!-- Cart Item 1 -->
-                                    <div class="flyout-item">
-                                        <div class="flyout-item-thumb">
-                                            <img src="<?= base_url('assets/img/product/product-5.webp') ?>" alt="Product" class="img-fluid">
-                                        </div>
+                                    <?php foreach ($cart['lines'] as $line): ?>
+                                    <div class="flyout-item" data-line="<?= esc($line['id'], 'attr') ?>">
+                                        <a href="<?= esc($line['url'], 'attr') ?>" class="flyout-item-thumb">
+                                            <?php if ($line['image']): ?>
+                                                <img src="<?= esc($line['image'], 'attr') ?>" alt="" class="img-fluid" loading="lazy">
+                                            <?php else: ?>
+                                                <i class="bi bi-image"></i>
+                                            <?php endif ?>
+                                        </a>
                                         <div class="flyout-item-details">
-                                            <h6>Woven Tote Handbag</h6>
-                                            <span class="item-option">Beige / Medium</span>
+                                            <h6><a href="<?= esc($line['url'], 'attr') ?>"><?= esc($line['name']) ?></a></h6>
+                                            <?php if ($line['tags'] !== []): ?>
+                                                <span class="item-option"><?= esc(implode(' / ', $line['tags'])) ?></span>
+                                            <?php endif ?>
+                                            <?php if ($line['when']): ?>
+                                                <span class="item-option"><i class="bi bi-calendar-event"></i> <?= esc($line['when']) ?></span>
+                                            <?php endif ?>
                                             <div class="item-bottom">
-                                                <span class="item-price">$89.00</span>
-                                                <span class="item-qty">x1</span>
+                                                <span class="item-price"><?= esc($line['price']) ?></span>
+                                                <span class="item-qty">×<?= $line['quantity'] ?></span>
                                             </div>
                                         </div>
-                                        <button class="item-dismiss" aria-label="Remove item">
-                                            <i class="bi bi-trash3"></i>
-                                        </button>
-                                    </div><!-- End Cart Item -->
-
-                                    <!-- Cart Item 2 -->
-                                    <div class="flyout-item">
-                                        <div class="flyout-item-thumb">
-                                            <img src="<?= base_url('assets/img/product/product-8.webp') ?>" alt="Product" class="img-fluid">
-                                        </div>
-                                        <div class="flyout-item-details">
-                                            <h6>Slim Fit Denim Jacket</h6>
-                                            <span class="item-option">Indigo / L</span>
-                                            <div class="item-bottom">
-                                                <span class="item-price">$145.00</span>
-                                                <span class="item-qty">x1</span>
-                                            </div>
-                                        </div>
-                                        <button class="item-dismiss" aria-label="Remove item">
-                                            <i class="bi bi-trash3"></i>
-                                        </button>
-                                    </div><!-- End Cart Item -->
-
-                                    <!-- Cart Item 3 -->
-                                    <div class="flyout-item">
-                                        <div class="flyout-item-thumb">
-                                            <img src="<?= base_url('assets/img/product/product-11.webp') ?>" alt="Product" class="img-fluid">
-                                        </div>
-                                        <div class="flyout-item-details">
-                                            <h6>Canvas Low-Top Sneakers</h6>
-                                            <span class="item-option">Off-White / 40</span>
-                                            <div class="item-bottom">
-                                                <span class="item-price">$68.00</span>
-                                                <span class="item-qty">x1</span>
-                                            </div>
-                                        </div>
-                                        <button class="item-dismiss" aria-label="Remove item">
-                                            <i class="bi bi-trash3"></i>
-                                        </button>
-                                    </div><!-- End Cart Item -->
+                                        <form method="post" action="<?= esc($cart['urls']['remove'], 'attr') ?>" class="flyout-remove">
+                                            <?= csrf_field() ?>
+                                            <input type="hidden" name="line" value="<?= esc($line['id'], 'attr') ?>">
+                                            <button type="submit" class="item-dismiss" aria-label="<?= esc(lang('Business.cart.remove') . ' ' . $line['name'], 'attr') ?>">
+                                                <i class="bi bi-trash3"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                    <?php endforeach ?>
                                 </div>
                                 <div class="flyout-bottom">
-                                    <div class="subtotal-row">
-                                        <span>Subtotal</span>
-                                        <span class="subtotal-value">$302.00</span>
+                                    <div class="subtotal-row"<?= $cart['lines'] === [] ? ' hidden' : '' ?>>
+                                        <span><?= lang('Business.cart.subtotal') ?></span>
+                                        <span class="subtotal-value"><?= esc($cart['summary']['subtotal']) ?></span>
                                     </div>
-                                    <a href="checkout.html" class="btn btn-proceed">Proceed to Checkout</a>
-                                    <a href="cart.html" class="link-viewbag">View full bag →</a>
+                                    <p class="flyout-note"<?= $cart['summary']['missing'] > 0 ? '' : ' hidden' ?>><?= esc($cart['summary']['missing_label']) ?></p>
+                                    <!-- the checkout until a participant's name is missing, then the cart, where it is added -->
+                                    <a href="<?= esc($cart['summary']['ready'] ? $cart['urls']['checkout'] : $cart['urls']['cart'], 'attr') ?>" class="btn btn-proceed"<?= $cart['lines'] === [] ? ' hidden' : '' ?>><?= lang('Business.cart.proceed') ?></a>
+                                    <a href="<?= esc($cart['urls']['cart'], 'attr') ?>" class="link-viewbag"><?= lang('Business.cart.view-cart') ?></a>
                                 </div>
                             </div>
                         </div>
+                        <?php endif ?>
 
                         <!-- Mobile Navigation Toggle -->
                         <i class="mobile-nav-toggle d-xl-none bi bi-list me-0"></i>
@@ -352,5 +342,90 @@
 <script src="<?= getenv('LINK_API') ?>js/tracker.js" data-site="mart" data-business="<?= esc($business_slug ?? '', 'attr') ?>" defer></script>
 <!-- Main JS File -->
 <script src="<?= base_url('assets/js/main.js') ?>"></script>
+<?php if (isset($cart)): ?>
+<script>
+    // the header's cart: redrawn from every cart answer (a page sends them as "cart:changed"), and its remove buttons
+    (function () {
+        const root = document.getElementById('header-cart');
+        const urls = <?= json_encode($cart['urls'], JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?>;
+        const text = <?= json_encode(['open' => lang('Business.cart.open', ['{0}']), 'remove' => lang('Business.cart.remove')], JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE) ?>;
+        const pick = (selector) => root.querySelector(selector);
+        const make = (tag, className, content) => {
+            const element = document.createElement(tag);
+            if (className) element.className = className;
+            if (content !== undefined) element.textContent = content;
+            return element;
+        };
+        const template = document.getElementById('header-cart-remove').content.firstElementChild;
+
+        const item = (line) => {
+            const row = make('div', 'flyout-item');
+            row.dataset.line = line.id;
+            const thumb = make('a', 'flyout-item-thumb');
+            thumb.href = line.url;
+            if (line.image) {
+                const image = make('img', 'img-fluid');
+                Object.assign(image, { src: line.image, alt: '', loading: 'lazy' });
+                thumb.append(image);
+            } else {
+                thumb.append(make('i', 'bi bi-image'));
+            }
+            const details = make('div', 'flyout-item-details');
+            const title = make('h6');
+            const link = make('a', '', line.name);
+            link.href = line.url;
+            title.append(link);
+            details.append(title);
+            if (line.tags.length) details.append(make('span', 'item-option', line.tags.join(' / ')));
+            if (line.when) {
+                const when = make('span', 'item-option', ' ' + line.when);
+                when.prepend(make('i', 'bi bi-calendar-event'));
+                details.append(when);
+            }
+            const bottom = make('div', 'item-bottom');
+            bottom.append(make('span', 'item-price', line.price), make('span', 'item-qty', '×' + line.quantity));
+            details.append(bottom);
+            row.append(thumb, details);
+            const form = template.cloneNode(true);
+            form.querySelector('[name="line"]').value = line.id;
+            form.querySelector('button').setAttribute('aria-label', text.remove + ' ' + line.name);
+            row.append(form);
+            return row;
+        };
+
+        const draw = (summary, lines) => {
+            if (!summary) return;
+            const empty = summary.lines === 0;
+            const badge = pick('.badge-count');
+            badge.textContent = summary.items > 99 ? '99+' : summary.items;
+            badge.hidden = summary.items === 0;
+            pick('.action-btn').setAttribute('aria-label', text.open.replace('{0}', summary.items_label));
+            pick('.items-label').textContent = summary.items_label;
+            pick('.flyout-empty').hidden = !empty;
+            pick('.subtotal-row').hidden = empty;
+            pick('.subtotal-value').textContent = summary.subtotal;
+            pick('.flyout-note').textContent = summary.missing_label;
+            pick('.flyout-note').hidden = summary.missing === 0;
+            const proceed = pick('.btn-proceed');
+            proceed.hidden = empty;
+            proceed.href = summary.ready ? urls.checkout : urls.cart;
+            if (Array.isArray(lines)) pick('.flyout-items').replaceChildren(...lines.map(item));
+        };
+
+        document.addEventListener('cart:changed', (event) => draw(event.detail.summary, event.detail.lines));
+
+        root.addEventListener('submit', (event) => {
+            const form = event.target.closest('.flyout-remove');
+            if (!form) return;
+            event.preventDefault();
+            form.querySelector('button').disabled = true;
+            fetch(form.action, { method: 'POST', body: new FormData(form), headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                .then((response) => response.json())
+                .then((answer) => document.dispatchEvent(new CustomEvent('cart:changed', { detail: Object.assign({ source: 'flyout' }, answer) })))
+                .catch(() => { form.querySelector('button').disabled = false; });
+        });
+    })();
+</script>
+<?php endif ?>
 </body>
 </html>

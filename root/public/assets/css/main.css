@@ -541,6 +541,44 @@ h6 {
   margin-bottom: 4px;
 }
 
+.header .main-bar .action-group .cart-flyout .flyout-items .flyout-item .flyout-item-thumb {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: color-mix(in srgb, var(--default-color), transparent 70%);
+}
+
+.header .main-bar .action-group .cart-flyout .flyout-items .flyout-item .flyout-item-details h6 a {
+  color: inherit;
+}
+
+.header .main-bar .action-group .cart-flyout .flyout-items .flyout-item .flyout-item-details h6 a:hover {
+  color: var(--accent-color);
+}
+
+.header .main-bar .action-group .cart-flyout .flyout-items .flyout-item .flyout-remove {
+  margin: 0;
+}
+
+.header .main-bar .action-group .cart-flyout .flyout-empty {
+  margin: 0;
+  padding: 24px 20px;
+  text-align: center;
+  font-size: 14px;
+  color: color-mix(in srgb, var(--default-color), transparent 40%);
+}
+
+.header .main-bar .action-group .cart-flyout .flyout-bottom .flyout-note {
+  margin: -8px 0 12px;
+  font-size: 12px;
+  color: #b45309;
+}
+
+.header .main-bar .action-group .action-btn .badge-count[hidden],
+.header .main-bar .action-group .cart-flyout [hidden] {
+  display: none !important;
+}
+
 .header .main-bar .action-group .cart-flyout .flyout-items .flyout-item .flyout-item-details .item-bottom {
   display: flex;
   align-items: center;
@@ -3825,7 +3863,7 @@ section,
   border-radius: 50%;
   cursor: pointer;
   position: relative;
-  border: 2px solid transparent;
+  border: 2px solid var(--accent-color);
   transition: all 0.2s ease;
   display: flex;
   align-items: center;

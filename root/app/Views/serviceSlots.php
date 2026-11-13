@@ -312,7 +312,7 @@ $names    = static fn (array $people): string => implode(', ', array_column($peo
                                             <strong><i class="bi bi-info-circle me-1"></i><?= lang('Business.slots.restrictions') ?></strong>
                                             <ul></ul>
                                             <div class="form-check mt-2">
-                                                <input class="form-check-input" type="checkbox" id="selection-acknowledge">
+                                                <input class="form-check-input" type="checkbox" id="selection-acknowledge" name="acknowledged" value="1">
                                                 <label class="form-check-label" for="selection-acknowledge"><?= lang('Business.slots.acknowledge') ?></label>
                                             </div>
                                         </div>

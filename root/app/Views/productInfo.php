@@ -181,6 +181,7 @@ $stars = static function (float $average): string {
                             </div>
                             <form id="product-cart-form" action="<?= esc($add_to_cart_url, 'attr') ?>" method="post">
                                 <?= csrf_field() ?>
+                                <input type="hidden" name="artifact" value="<?= esc($artifact['public_id'], 'attr') ?>">
                                 <input type="hidden" name="variant" id="product-variant" value="<?= esc($chosen['public_id'], 'attr') ?>">
                                 <div class="action-row">
                                     <div class="quantity-selector">
@@ -429,14 +430,15 @@ $stars = static function (float $average): string {
                 byId('product-cart-added').hidden = true;
                 byId('product-cart-failed').hidden = true;
                 fetch(form.action, { method: 'POST', body: new FormData(form), headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-                    .then((response) => {
+                    .then((response) => response.json().then((answer) => {
+                        if (answer.summary) document.dispatchEvent(new CustomEvent('cart:changed', { detail: answer }));
                         if (!response.ok) throw new Error(String(response.status));
                         if (buyNow) {
                             window.location.href = checkoutUrl;
                             return;
                         }
                         byId('product-cart-added').hidden = false;
-                    })
+                    }))
                     .catch(() => { byId('product-cart-failed').hidden = false; })
                     .finally(() => { buttons.forEach((button) => { button.disabled = current.stock === 0; }); });
             });

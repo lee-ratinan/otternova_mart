@@ -245,7 +245,8 @@ class Business extends BaseController
             'date_from'        => $query['date_from'] ?? null,
             'date_to'          => $query['date_to'] ?? null,
             'sessions'         => $sessions,
-            'notice'           => $notice,
+            // a time or session the cart turned down comes back here with why
+            'notice'           => session()->getFlashdata('cart_error') ?? $notice,
             'url'              => $url,
         ]);
     }
@@ -351,18 +352,43 @@ class Business extends BaseController
             'chosen_staff'     => $chosen,
             'periods'          => $periods,
             'slot_count'       => count($data['slots']),
-            'notice'           => $notice,
+            // a time or session the cart turned down comes back here with why
+            'notice'           => session()->getFlashdata('cart_error') ?? $notice,
             'url'              => $url,
         ]);
     }
 
+    /**
+     * The customer's cart at this business, kept in their session (Business::cartLines()): what each line is, its
+     * price when it was put in, how many, and for a booking the names of the people it is for
+     * @param string $businessSlug
+     * @return string
+     */
     public function cart(string $businessSlug): string
     {
-        $locale = $this->request->getLocale();
-        $data   = [
-            'locale' => $locale,
-        ];
-        return view('cart', $data);
+        $locale   = $this->request->getLocale();
+        $site     = $this->site($businessSlug, $locale);
+        $currency = (string) $site['business']['currency_code'];
+        $base     = base_url(rawurlencode($businessSlug));
+
+        return view('cart', $this->layout($site, $businessSlug, $locale) + [
+            'page_title'       => lang('Business.cart.title'),
+            'business_name'    => $site['business']['name'],
+            'meta_description' => $site['meta']['description'],
+            'meta_keywords'    => $site['meta']['keywords'],
+            'site'             => $site,
+            'lines'            => $this->cartViews($businessSlug, $currency, $locale),
+            'summary'          => $this->cartSummary($businessSlug, $currency, $locale),
+            'message'          => session()->getFlashdata('cart_message'),
+            'error'            => session()->getFlashdata('cart_error'),
+            'urls'             => [
+                'home'     => $base,
+                'update'   => $base . '/update-cart',
+                'remove'   => $base . '/remove-from-cart',
+                'clear'    => $base . '/clear-cart',
+                'checkout' => $base . '/checkout',
+            ],
+        ]);
     }
 
     public function checkout(string $businessSlug): string
@@ -419,24 +445,122 @@ class Business extends BaseController
         return $this->response->setJSON([]);
     }
 
+    /**
+     * Puts one thing in the cart, after the API says it can still be had. What it is comes from the fields sent:
+     * - a group session (booking type G): variant, session, and acknowledged=1 when its people do not serve everyone;
+     *   one seat, or one more seat when the session is in the cart already
+     * - an appointment (booking type A): variant, store, starts_at (as v1/mart/slots wrote it), staff[] (whom the
+     *   time books), and acknowledged=1 when they do not serve everyone; refused when it is in the cart already, or
+     *   when one of those people is booked in the cart at an overlapping time
+     * - a product: artifact, variant, quantity (1 when not given), added to what of the variant the cart has, within
+     *   its stock; intent=buy sends a form post on to the checkout
+     * A request with X-Requested-With: XMLHttpRequest is answered in JSON ({ok, message, line, summary}; 422 when it is
+     * turned down, 503 when the API cannot be reached), a form post by a redirect to the cart, or back with the reason.
+     * @param string $businessSlug
+     * @return ResponseInterface
+     */
     public function addToCart(string $businessSlug): ResponseInterface
     {
-        return $this->response->setJSON([]);
+        $locale = $this->request->getLocale();
+        $site   = $this->site($businessSlug, $locale);
+        $lines  = $this->cartLines($businessSlug);
+        try {
+            $variant = $this->postId('variant');
+            if ($this->postText('session') !== '') {
+                $index = $this->addSessionLine($businessSlug, $lines, $variant, $this->postId('session'), $locale);
+            } elseif ($this->postText('starts_at') !== '') {
+                $staff = $this->request->getPost('staff');
+                $staff = is_array($staff) ? array_values(array_unique(array_filter(array_map(static fn ($id): string => is_string($id) ? trim($id) : '', $staff)))) : [];
+                if ($staff === [] || count($staff) > 10 || mb_strlen($this->postText('starts_at')) > 40) {
+                    throw new \DomainException(lang('Business.cart.invalid'));
+                }
+                $index = $this->addAppointmentLine($businessSlug, $lines, $variant, $this->postId('store'), $this->postText('starts_at'), $staff, $locale);
+            } else {
+                $quantity = $this->postText('quantity') === '' ? 1 : $this->postQuantity();
+                $index    = $this->addProductLine($businessSlug, $lines, $this->postId('artifact'), $variant, $quantity, $locale);
+            }
+        } catch (\DomainException|RuntimeException $e) {
+            return $this->cartFailure($businessSlug, $site, $e);
+        }
+        $this->saveCart($businessSlug, $lines);
+        $buy = $this->postText('intent') === 'buy';
+
+        return $this->cartAnswer($businessSlug, $site, lang('Business.cart.added'), $lines[$index],
+            $buy ? base_url(rawurlencode($businessSlug) . '/checkout') : null);
     }
 
+    /**
+     * Takes a line out of the cart: line (its id)
+     * @param string $businessSlug
+     * @return ResponseInterface
+     */
     public function removeFromCart(string $businessSlug): ResponseInterface
     {
-        return $this->response->setJSON([]);
+        $site  = $this->site($businessSlug, $this->request->getLocale());
+        $id    = $this->postText('line');
+        $lines = $this->cartLines($businessSlug);
+        $kept  = array_values(array_filter($lines, static fn (array $line): bool => $line['id'] !== $id));
+        if (count($kept) === count($lines)) {
+            return $this->cartFailure($businessSlug, $site, new \DomainException(lang('Business.cart.line-gone')));
+        }
+        $this->saveCart($businessSlug, $kept);
+
+        return $this->cartAnswer($businessSlug, $site, lang('Business.cart.removed'));
     }
 
+    /**
+     * Changes a line of the cart: line (its id), and either or both of
+     * - quantity: of a product, within its stock; seats of a group session, within those left (an appointment is
+     *   always one). Only more than the line had is checked with the API.
+     * - participants[]: the names of whom a booking is for, one a seat; what is not sent stays as it was
+     * @param string $businessSlug
+     * @return ResponseInterface
+     */
     public function updateCart(string $businessSlug): ResponseInterface
     {
-        return $this->response->setJSON([]);
+        $locale = $this->request->getLocale();
+        $site   = $this->site($businessSlug, $locale);
+        $lines  = $this->cartLines($businessSlug);
+        $id     = $this->postText('line');
+        $index  = array_search($id, array_column($lines, 'id'), true);
+        if ($index === false) {
+            return $this->cartFailure($businessSlug, $site, new \DomainException(lang('Business.cart.line-gone')));
+        }
+        $line = $lines[$index];
+        try {
+            if ($this->postText('quantity') !== '' && $line['kind'] !== 'A') {
+                $quantity = $this->postQuantity();
+                if ($quantity > $line['quantity']) {
+                    $line['max'] = $line['kind'] === 'P'
+                        ? $this->productStock($businessSlug, $line['artifact'], $line['variant'], $quantity, $locale)
+                        : $this->sessionSeats($businessSlug, $line['variant'], $line['session'], $quantity, $locale);
+                }
+                $line['quantity'] = $quantity;
+            }
+            $names = $this->request->getPost('participants');
+            if ($line['kind'] !== 'P') {
+                $line['participants'] = $this->participants(is_array($names) ? $names : $line['participants'], $line['quantity']);
+            }
+        } catch (\DomainException|RuntimeException $e) {
+            return $this->cartFailure($businessSlug, $site, $e, $lines[$index]);
+        }
+        $lines[$index] = $line;
+        $this->saveCart($businessSlug, $lines);
+
+        return $this->cartAnswer($businessSlug, $site, lang('Business.cart.updated'), $line);
     }
 
+    /**
+     * Empties the cart
+     * @param string $businessSlug
+     * @return ResponseInterface
+     */
     public function clearCart(string $businessSlug): ResponseInterface
     {
-        return $this->response->setJSON([]);
+        $site = $this->site($businessSlug, $this->request->getLocale());
+        $this->saveCart($businessSlug, []);
+
+        return $this->cartAnswer($businessSlug, $site, lang('Business.cart.cleared'));
     }
 
     public function checkoutInit(string $businessSlug): ResponseInterface
@@ -493,7 +617,34 @@ class Business extends BaseController
     {
         [$css, $fontsUrl] = $this->theme($site['theme'], $locale);
 
-        return ['locale' => $locale, 'business_slug' => $businessSlug, 'css' => $css, 'google_fonts_url' => $fontsUrl];
+        return [
+            'locale'           => $locale,
+            'business_slug'    => $businessSlug,
+            'css'              => $css,
+            'google_fonts_url' => $fontsUrl,
+            'cart'             => $this->cartFlyout($businessSlug, (string) $site['business']['currency_code'], $locale),
+        ];
+    }
+
+    /**
+     * What the header's cart dropdown shows: every line, the totals, and where its links and remove buttons go
+     * @return array{lines: list<array>, summary: array, urls: array{cart: string, checkout: string, remove: string}}
+     */
+    private function cartFlyout(string $businessSlug, string $currency, string $locale): array
+    {
+        $base = base_url(rawurlencode($businessSlug));
+
+        return [
+            'lines'   => $this->cartViews($businessSlug, $currency, $locale),
+            'summary' => $this->cartSummary($businessSlug, $currency, $locale),
+            'urls'    => ['cart' => $base . '/cart', 'checkout' => $base . '/checkout', 'remove' => $base . '/remove-from-cart'],
+        ];
+    }
+
+    /** Every line of the cart as the pages show it */
+    private function cartViews(string $businessSlug, string $currency, string $locale): array
+    {
+        return array_map(fn (array $line): array => $this->cartView($line, $currency, $locale), $this->cartLines($businessSlug));
     }
 
     /**
@@ -628,6 +779,508 @@ class Business extends BaseController
                 'image'        => $images[$variant['public_id']] ?? null,
             ];
         }, $data['variants']);
+    }
+
+    /** Lines a cart holds at most */
+    private const CART_LINES = 50;
+
+    /** Characters of a participant's name */
+    private const NAME_LENGTH = 100;
+
+    /**
+     * The cart of a business in the customer's session, one per business
+     * @param string $businessSlug
+     * @return list<array> lines: {id, kind: P|A|G, artifact, variant, name, image, url, tags: list<string>, price,
+     *                     compare, quantity, max (stock or seats left at the last check; null: no limit), and
+     *                     A: store, starts_at, ends_at, staff: list<string>; G: session, starts_at, ends_at;
+     *                     A and G: participants: list<string>, one a seat}
+     */
+    private function cartLines(string $businessSlug): array
+    {
+        $carts = session()->get('carts');
+
+        return array_values(is_array($carts[$businessSlug] ?? null) ? $carts[$businessSlug] : []);
+    }
+
+    private function saveCart(string $businessSlug, array $lines): void
+    {
+        $carts = session()->get('carts');
+        $carts = is_array($carts) ? $carts : [];
+        if ($lines === []) {
+            unset($carts[$businessSlug]);
+        } else {
+            $carts[$businessSlug] = array_values($lines);
+        }
+        session()->set('carts', $carts);
+    }
+
+    /**
+     * A product's line put in the cart, or the quantity added to the line of its variant
+     * @return int the line's index
+     * @throws \DomainException|RuntimeException
+     */
+    private function addProductLine(string $businessSlug, array &$lines, string $artifactId, string $variantId, int $quantity, string $locale): int
+    {
+        $data    = $this->cartArtifact($businessSlug, $artifactId, $locale);
+        $variant = current(array_filter($data['variants'], static fn (array $v): bool => $v['public_id'] === $variantId)) ?: null;
+        if ($variant === null || $data['artifact']['type'] === 'S') {
+            throw new \DomainException(lang('Business.cart.not-found'));
+        }
+        $index = null;
+        foreach ($lines as $i => $line) {
+            if ($line['kind'] === 'P' && $line['variant'] === $variantId) {
+                $index = $i;
+            }
+        }
+        $inCart = $index === null ? 0 : (int) $lines[$index]['quantity'];
+        $total  = $quantity + $inCart;
+        $max    = $this->stockFor($variant, $total, $inCart);
+        $tags  = [];
+        foreach ($data['options'] as $option) {
+            foreach ($option['values'] as $value) {
+                if (in_array(['attribute_public_id' => $option['public_id'], 'value_public_id' => $value['public_id']], $variant['attribute_values'], false)) {
+                    $tags[] = $option['name'] . ': ' . $value['value'];
+                }
+            }
+        }
+        $image = null;
+        foreach ($data['images'] as $picture) {
+            if ($picture['variant_public_id'] === $variantId) {
+                $image = $picture['url'];
+                break;
+            }
+        }
+        $line = [
+            'id'       => $index === null ? bin2hex(random_bytes(6)) : $lines[$index]['id'],
+            'kind'     => 'P',
+            'artifact' => $data['artifact']['public_id'],
+            'variant'  => $variantId,
+            'name'     => $data['artifact']['name'],
+            'image'    => $image ?? $data['images'][0]['url'] ?? $data['artifact']['cover_url'] ?? null,
+            'url'      => base_url(rawurlencode($businessSlug) . '/product/' . rawurlencode($data['artifact']['public_id'])),
+            'tags'     => $tags,
+            'price'    => $variant['price']['active'],
+            'compare'  => $variant['price']['compare'],
+            'quantity' => $total,
+            'max'      => $max,
+        ];
+
+        return $this->placeLine($lines, $line, $index);
+    }
+
+    /**
+     * An appointment's line put in the cart, while v1/mart/slots still has its time free with the same people
+     * @param list<string> $staff
+     * @return int the line's index
+     * @throws \DomainException|RuntimeException
+     */
+    private function addAppointmentLine(string $businessSlug, array &$lines, string $variantId, string $storeId, string $startsAt, array $staff, string $locale): int
+    {
+        $query = ['business_slug' => $businessSlug, 'lang' => $locale, 'variant' => $variantId, 'store' => $storeId, 'date' => substr($startsAt, 0, 10)];
+        if (count($staff) === 1) {
+            $query['staff'] = $staff[0];
+        }
+        [$code, $body] = $this->fetchApi('v1/mart/slots', $query);
+        if (in_array($code, [400, 404, 422], true)) {
+            throw new \DomainException(lang('Business.cart.slot-taken'));
+        }
+        if ($code !== 200 || ! is_array($body['data'] ?? null)) {
+            throw new RuntimeException(lang('Business.load-failed'));
+        }
+        $data   = $body['data'];
+        $wanted = $staff;
+        sort($wanted);
+        $slot = null;
+        foreach ($data['slots'] as $free) {
+            $people = $free['staff'];
+            sort($people);
+            if ($free['starts_at'] === $startsAt && $free['store_public_id'] === $storeId && $people === $wanted) {
+                $slot = $free;
+                break;
+            }
+        }
+        if ($slot === null) {
+            throw new \DomainException(lang('Business.cart.slot-taken'));
+        }
+        $people = array_values(array_filter($data['staff'], static fn (array $person): bool => in_array($person['public_id'], $staff, true)));
+        $this->requireAcknowledged($people);
+        foreach ($lines as $line) {
+            if ($line['kind'] !== 'A') {
+                continue;
+            }
+            if ($line['variant'] === $variantId && $line['starts_at'] === $startsAt && $line['staff'] === $wanted) {
+                throw new \DomainException(lang('Business.cart.already'));
+            }
+            $shared = array_intersect($line['staff'], $wanted);
+            if ($shared !== [] && strtotime($line['starts_at']) < strtotime($slot['ends_at']) && strtotime($slot['starts_at']) < strtotime($line['ends_at'])) {
+                $names = array_column(array_filter($people, static fn (array $p): bool => in_array($p['public_id'], $shared, true)), 'name');
+                throw new \DomainException(lang('Business.cart.clash', [implode(', ', $names)]));
+            }
+        }
+        $service = $data['service'];
+        $store   = current(array_filter($data['stores'], static fn (array $s): bool => $s['public_id'] === $storeId)) ?: null;
+        $line    = [
+            'id'           => bin2hex(random_bytes(6)),
+            'kind'         => 'A',
+            'artifact'     => $service['public_id'],
+            'variant'      => $variantId,
+            'name'         => $service['name'],
+            'image'        => $service['cover_url'] ?? null,
+            'url'          => base_url(rawurlencode($businessSlug) . '/service/' . rawurlencode($service['public_id'])),
+            'tags'         => array_values(array_filter([
+                $service['variant']['label'] ?? '',
+                $store === null ? '' : $store['name'],
+                lang('Business.cart.with', [implode(', ', array_column($people, 'name'))]),
+            ], static fn (string $tag): bool => $tag !== '')),
+            'price'        => $service['variant']['price']['active'],
+            'compare'      => $service['variant']['price']['compare'],
+            'quantity'     => 1,
+            'max'          => 1,
+            'store'        => $storeId,
+            'starts_at'    => $slot['starts_at'],
+            'ends_at'      => $slot['ends_at'],
+            'staff'        => $wanted,
+            'participants' => [''],
+        ];
+
+        return $this->placeLine($lines, $line, null);
+    }
+
+    /**
+     * A seat of a group session put in the cart, or one more seat on its line, while v1/mart/sessions has it open
+     * with a seat left
+     * @return int the line's index
+     * @throws \DomainException|RuntimeException
+     */
+    private function addSessionLine(string $businessSlug, array &$lines, string $variantId, string $sessionId, string $locale): int
+    {
+        $index = null;
+        foreach ($lines as $i => $line) {
+            if ($line['kind'] === 'G' && $line['session'] === $sessionId) {
+                $index = $i;
+            }
+        }
+        $seats = 1 + ($index === null ? 0 : (int) $lines[$index]['quantity']);
+        [$data, $session] = $this->bookableSession($businessSlug, $variantId, $sessionId, $locale);
+        $this->seatsFor($session, $seats);
+        if ($index === null) {
+            $this->requireAcknowledged(array_values(array_filter($data['staff'], static fn (array $person): bool => in_array($person['public_id'], $session['staff'], true))));
+        }
+        $service = $data['service'];
+        $store   = current(array_filter($data['stores'], static fn (array $s): bool => $s['public_id'] === $session['store_public_id'])) ?: null;
+        $line    = [
+            'id'           => $index === null ? bin2hex(random_bytes(6)) : $lines[$index]['id'],
+            'kind'         => 'G',
+            'artifact'     => $service['public_id'],
+            'variant'      => $variantId,
+            'name'         => $service['name'],
+            'image'        => $service['cover_url'] ?? null,
+            'url'          => base_url(rawurlencode($businessSlug) . '/service/' . rawurlencode($service['public_id'])),
+            'tags'         => array_values(array_filter([
+                $service['variant']['label'] ?? '',
+                (string) $session['name'],
+                $store === null ? '' : $store['name'],
+            ], static fn (string $tag): bool => $tag !== '')),
+            'price'        => $service['variant']['price']['active'],
+            'compare'      => $service['variant']['price']['compare'],
+            'quantity'     => $seats,
+            'max'          => (int) $session['seats_available'],
+            'session'      => $sessionId,
+            'starts_at'    => $session['starts_at'],
+            'ends_at'      => $session['ends_at'],
+            'participants' => $this->participants($index === null ? [] : $lines[$index]['participants'], $seats),
+        ];
+
+        return $this->placeLine($lines, $line, $index);
+    }
+
+    /**
+     * @return int the line's index
+     * @throws \DomainException When a new line finds the cart full
+     */
+    private function placeLine(array &$lines, array $line, ?int $index): int
+    {
+        if ($index !== null) {
+            $lines[$index] = $line;
+
+            return $index;
+        }
+        if (count($lines) >= self::CART_LINES) {
+            throw new \DomainException(lang('Business.cart.cart-full'));
+        }
+        $lines[] = $line;
+
+        return count($lines) - 1;
+    }
+
+    /**
+     * v1/mart/artifact for a line
+     * @throws \DomainException|RuntimeException
+     */
+    private function cartArtifact(string $businessSlug, string $artifactId, string $locale): array
+    {
+        [$code, $body] = $this->fetchApi('v1/mart/artifact', ['business_slug' => $businessSlug, 'public_id' => $artifactId, 'lang' => $locale]);
+        if ($code === 404 || $code === 400) {
+            throw new \DomainException(lang('Business.cart.not-found'));
+        }
+        if ($code !== 200 || ! is_array($body['data'] ?? null)) {
+            throw new RuntimeException(lang('Business.load-failed'));
+        }
+
+        return $body['data'];
+    }
+
+    /**
+     * The stock of a product's variant, checked for a quantity
+     * @return int|null the stock; null when no store keeps count of it
+     * @throws \DomainException|RuntimeException
+     */
+    private function productStock(string $businessSlug, string $artifactId, string $variantId, int $quantity, string $locale): ?int
+    {
+        $data    = $this->cartArtifact($businessSlug, $artifactId, $locale);
+        $variant = current(array_filter($data['variants'], static fn (array $v): bool => $v['public_id'] === $variantId)) ?: null;
+        if ($variant === null) {
+            throw new \DomainException(lang('Business.cart.not-found'));
+        }
+
+        return $this->stockFor($variant, $quantity);
+    }
+
+    /**
+     * @param array $variant  v1/mart/artifact's
+     * @param int   $quantity what the cart would hold
+     * @param int   $inCart   what it holds already, for the reason
+     * @return int|null its stock; null when no store keeps count of it
+     * @throws \DomainException When there is not enough of it
+     */
+    private function stockFor(array $variant, int $quantity, int $inCart = 0): ?int
+    {
+        $stock = $variant['stock'] === null ? null : max(0, (int) $variant['stock']);
+        if ($stock === 0) {
+            throw new \DomainException(lang('Business.cart.out-of-stock'));
+        }
+        if ($quantity > ($stock ?? self::MAX_QUANTITY)) {
+            throw new \DomainException($inCart > 0
+                ? lang('Business.cart.only-left-in-cart', [$stock ?? self::MAX_QUANTITY, $inCart])
+                : lang('Business.cart.only-left', [$stock ?? self::MAX_QUANTITY]));
+        }
+
+        return $stock;
+    }
+
+    /**
+     * A session v1/mart/sessions still has to book: open, with a seat left, and its booking not closed
+     * @return array{0: array, 1: array} [the answer's data, the session]
+     * @throws \DomainException|RuntimeException
+     */
+    private function bookableSession(string $businessSlug, string $variantId, string $sessionId, string $locale): array
+    {
+        [$code, $body] = $this->fetchApi('v1/mart/sessions', ['business_slug' => $businessSlug, 'lang' => $locale, 'variant' => $variantId]);
+        if (in_array($code, [400, 404, 422], true)) {
+            throw new \DomainException(lang('Business.cart.session-gone'));
+        }
+        if ($code !== 200 || ! is_array($body['data'] ?? null)) {
+            throw new RuntimeException(lang('Business.load-failed'));
+        }
+        foreach ($body['data']['sessions'] as $session) {
+            if ($session['public_id'] === $sessionId) {
+                return [$body['data'], $session];
+            }
+        }
+
+        throw new \DomainException(lang('Business.cart.session-gone'));
+    }
+
+    /**
+     * The seats left of a session, checked for a number of seats
+     * @throws \DomainException|RuntimeException
+     */
+    private function sessionSeats(string $businessSlug, string $variantId, string $sessionId, int $seats, string $locale): int
+    {
+        return $this->seatsFor($this->bookableSession($businessSlug, $variantId, $sessionId, $locale)[1], $seats);
+    }
+
+    /**
+     * @throws \DomainException When the session has fewer seats left
+     */
+    private function seatsFor(array $session, int $seats): int
+    {
+        $left = (int) $session['seats_available'];
+        if ($left < 1) {
+            throw new \DomainException(lang('Business.cart.session-full'));
+        }
+        if ($seats > $left) {
+            throw new \DomainException(lang('Business.cart.seats-left', [$left]));
+        }
+
+        return $left;
+    }
+
+    /**
+     * Whom a booking holds that do not serve everyone must have been told to the customer, who ticks acknowledged
+     * @param list<array> $people {restrictions}
+     * @throws \DomainException
+     */
+    private function requireAcknowledged(array $people): void
+    {
+        foreach ($people as $person) {
+            if ($this->restrictionLines($person['restrictions'] ?? null) !== [] && $this->postText('acknowledged') !== '1') {
+                throw new \DomainException(lang('Business.cart.acknowledge'));
+            }
+        }
+    }
+
+    /**
+     * Names of the participants, one a seat: trimmed, cut to NAME_LENGTH, and as many as the seats
+     * @return list<string>
+     */
+    private function participants(array $names, int $seats): array
+    {
+        $names = array_map(static fn ($name): string => is_string($name) ? mb_substr(trim(preg_replace('/\s+/u', ' ', $name)), 0, self::NAME_LENGTH) : '', array_values($names));
+
+        return array_pad(array_slice($names, 0, $seats), $seats, '');
+    }
+
+    /** A posted field, trimmed; '' when it is missing or not text */
+    private function postText(string $name): string
+    {
+        $value = $this->request->getPost($name);
+
+        return is_string($value) ? trim($value) : '';
+    }
+
+    /**
+     * A posted public_id
+     * @throws \DomainException When it is missing or cannot be one
+     */
+    private function postId(string $name): string
+    {
+        $value = $this->postText($name);
+        if (! preg_match('/^[A-Za-z0-9_-]{1,32}$/', $value)) {
+            throw new \DomainException(lang('Business.cart.invalid'));
+        }
+
+        return $value;
+    }
+
+    /**
+     * The posted quantity: a whole number from 1 to MAX_QUANTITY
+     * @throws \DomainException
+     */
+    private function postQuantity(): int
+    {
+        $value = $this->postText('quantity');
+        if (! ctype_digit($value) || (int) $value < 1 || (int) $value > self::MAX_QUANTITY) {
+            throw new \DomainException(lang('Business.cart.invalid-quantity', [self::MAX_QUANTITY]));
+        }
+
+        return (int) $value;
+    }
+
+    /**
+     * A line as the cart page shows it
+     * @return array{id: string, kind: string, name: string, image: string|null, url: string, tags: list<string>,
+     *               when: string|null, price: string, compare: string|null, discount: int|null, quantity: int,
+     *               max: int, total: string, participants: list<string>|null}
+     */
+    private function cartView(array $line, string $currency, string $locale): array
+    {
+        $price   = (float) $line['price'];
+        $compare = $line['compare'] === null ? null : (float) $line['compare'];
+        $onSale  = $compare !== null && $compare > $price;
+
+        return [
+            'id'           => $line['id'],
+            'kind'         => $line['kind'],
+            'name'         => $line['name'],
+            'image'        => $line['image'],
+            'url'          => $line['url'],
+            'tags'         => $line['tags'],
+            'when'         => isset($line['starts_at']) ? $this->span($line['starts_at'], $line['ends_at'] ?? null, $locale) : null,
+            'price'        => $this->money($price, $currency, $locale),
+            'compare'      => $onSale ? $this->money($compare, $currency, $locale) : null,
+            'discount'     => $onSale ? (int) round(100 * ($compare - $price) / $compare) : null,
+            'quantity'     => (int) $line['quantity'],
+            // a line may hold more than is left now; it is checked again at the checkout
+            'max'          => $line['kind'] === 'A' ? 1 : max((int) $line['quantity'], min(self::MAX_QUANTITY, $line['max'] ?? self::MAX_QUANTITY)),
+            'total'        => $this->money($price * (int) $line['quantity'], $currency, $locale),
+            'participants' => $line['kind'] === 'P' ? null : $line['participants'],
+        ];
+    }
+
+    /**
+     * The cart's totals, and whether it can go to the checkout: every participant named
+     * @return array{lines: int, items: int, items_label: string, subtotal: string, missing: int, missing_label: string, ready: bool}
+     */
+    private function cartSummary(string $businessSlug, string $currency, string $locale): array
+    {
+        $lines    = $this->cartLines($businessSlug);
+        $items    = 0;
+        $subtotal = 0.0;
+        $missing  = 0;
+        foreach ($lines as $line) {
+            $items    += (int) $line['quantity'];
+            $subtotal += (float) $line['price'] * (int) $line['quantity'];
+            $missing  += count(array_filter($line['participants'] ?? [], static fn (string $name): bool => $name === ''));
+        }
+
+        return [
+            'lines'         => count($lines),
+            'items'         => $items,
+            'items_label'   => lang('Business.cart.items', [$items]),
+            'subtotal'      => $this->money($subtotal, $currency, $locale),
+            'missing'       => $missing,
+            'missing_label' => $missing > 0 ? lang('Business.cart.names-needed', [$missing]) : '',
+            'ready'         => $lines !== [] && $missing === 0,
+        ];
+    }
+
+    /**
+     * What a cart endpoint did: JSON to a script, else a redirect (to the cart, or $redirect) with the message
+     */
+    private function cartAnswer(string $businessSlug, array $site, string $message, ?array $line = null, ?string $redirect = null): ResponseInterface
+    {
+        $locale   = $this->request->getLocale();
+        $currency = (string) $site['business']['currency_code'];
+        if ($this->request->isAJAX()) {
+            return $this->response->setJSON([
+                'ok'       => true,
+                'message'  => $message,
+                'line'     => $line === null ? null : $this->cartView($line, $currency, $locale),
+                'summary'  => $this->cartSummary($businessSlug, $currency, $locale),
+                'lines'    => $this->cartViews($businessSlug, $currency, $locale),
+                'redirect' => $redirect,
+            ]);
+        }
+
+        return redirect()->to($redirect ?? base_url(rawurlencode($businessSlug) . '/cart'))->with('cart_message', $message);
+    }
+
+    /**
+     * Why a cart endpoint did nothing: 422 when it was turned down, 503 when the API could not be reached; a form post
+     * goes back where it came from with the reason
+     * @param array|null $line the line as it stays, for the page to put back
+     */
+    private function cartFailure(string $businessSlug, array $site, \Throwable $error, ?array $line = null): ResponseInterface
+    {
+        $locale   = $this->request->getLocale();
+        $currency = (string) $site['business']['currency_code'];
+        $message  = $error instanceof \DomainException ? $error->getMessage() : lang('Business.cart.try-again');
+        if ($this->request->isAJAX()) {
+            return $this->response->setStatusCode($error instanceof \DomainException ? 422 : 503)->setJSON([
+                'ok'      => false,
+                'message' => $message,
+                'line'    => $line === null ? null : $this->cartView($line, $currency, $locale),
+                'summary' => $this->cartSummary($businessSlug, $currency, $locale),
+                'lines'   => $this->cartViews($businessSlug, $currency, $locale),
+            ]);
+        }
+
+        // back to the page the form was on, when it is one of this site's
+        $referrer = $this->request->getServer('HTTP_REFERER');
+        $back     = is_string($referrer) && str_starts_with($referrer, base_url()) ? $referrer : base_url(rawurlencode($businessSlug) . '/cart');
+
+        return redirect()->to($back)->with('cart_error', $message);
     }
 
     /** "2026-11-10 09:30:00" as the locale writes a date */
