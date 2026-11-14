@@ -1111,8 +1111,23 @@ class Business extends BaseController
             'business_slug'    => $businessSlug,
             'css'              => $css,
             'google_fonts_url' => $fontsUrl,
-            'cart'             => $this->cartFlyout($businessSlug, (string) $site['business']['currency_code'], $locale),
+            'logo'             => $this->logo($site['theme']['logo'] ?? null),
+            'cart'           => $this->cartFlyout($businessSlug, (string) $site['business']['currency_code'], $locale),
         ];
+    }
+
+    /**
+     * The business's logo from v1/mart/site's theme, or null when it has none or it is malformed
+     * @param mixed $logo {url, shape} or null
+     * @return array{url: string, shape: string}|null shape S square (1000x1000) or W wide (2000x1000)
+     */
+    private function logo(mixed $logo): ?array
+    {
+        if (! is_array($logo) || ! is_string($logo['url'] ?? null) || ! preg_match('#^https?://#i', $logo['url'])) {
+            return null;
+        }
+
+        return ['url' => $logo['url'], 'shape' => ($logo['shape'] ?? null) === 'W' ? 'W' : 'S'];
     }
 
     /**

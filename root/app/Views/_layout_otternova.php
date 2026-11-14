@@ -7,8 +7,13 @@
     <meta name="description" content="<?= esc($meta_description ?? '???', 'attr') ?>">
     <meta name="keywords" content="<?= esc($meta_keywords ?? '???', 'attr') ?>">
     <!-- Favicons -->
-    <link href="<?= base_url('assets/img/logo.webp') ?>" rel="icon">
-    <link href="<?= base_url('assets/img/logo.webp') ?>" rel="apple-touch-icon">
+    <?php
+    // the business's logo, when it has one; a wide one is too narrow for a favicon, so that keeps OtterNova's
+    $logoUrl    = isset($logo['url']) ? $logo['url'] : base_url('assets/img/logo.webp');
+    $faviconUrl = isset($logo['url']) && $logo['shape'] === 'S' ? $logo['url'] : base_url('assets/img/logo.webp');
+    ?>
+    <link href="<?= esc($faviconUrl, 'attr') ?>" rel="icon">
+    <link href="<?= esc($faviconUrl, 'attr') ?>" rel="apple-touch-icon">
     <!-- Fonts -->
     <link href="https://fonts.googleapis.com" rel="preconnect">
     <link href="https://fonts.gstatic.com" rel="preconnect" crossorigin>
@@ -46,6 +51,12 @@
         OtternovaTracker.track(<?= json_encode($eventName, JSON_HEX_TAG | JSON_HEX_AMP) ?>, <?= json_encode($eventProps, JSON_HEX_TAG | JSON_HEX_AMP | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?>);
         <?php endforeach ?>
     </script>
+    <?php
+    $homeUrl = base_url();
+    if (isset($site['business'])) {
+        $homeUrl = base_url(rawurlencode($site['business']['slug']));
+    }
+    ?>
 </head>
 <body class="index-page lang-<?= $locale ?>">
 <header id="header" class="header position-relative">
@@ -55,65 +66,26 @@
             <div class="row align-items-center gy-2">
                 <!-- Logo -->
                 <div class="col-auto">
-                    <a href="index.html" class="logo d-flex align-items-center">
-                        <!-- <img src="<?= base_url('assets/img/logo.webp') ?>" alt=""> -->
-                        <i class="bi bi-cart2"></i>
-                        <h1 class="sitename"><?= lang('System.site-title') ?></h1>
+                    <a href="<?= esc($homeUrl, 'attr') ?>" class="logo d-flex align-items-center">
+                        <img src="<?= esc($logoUrl, 'attr') ?>" alt="<?= esc((isset($business_name) ? $business_name : lang('System.site-title'))) ?>">
+                        <h1 class="sitename"><?= esc((isset($business_name) ? $business_name : lang('System.site-title'))) ?></h1>
                     </a>
                 </div>
                 <!-- Search -->
                 <div class="col d-none d-lg-block">
-                    <form class="search-bar">
+                    <form class="search-bar d-none">
                         <i class="bi bi-search search-icon"></i>
                         <input type="text" class="search-field" placeholder="Search for products, brands, and more...">
                         <button class="search-submit" type="submit">Search</button>
                     </form>
                 </div>
-
                 <!-- Actions -->
                 <div class="col-auto ms-auto ms-lg-0">
                     <div class="action-group d-flex align-items-center">
-
-                        <!-- Mobile Search Toggle -->
+                        <?php /*!-- Mobile Search Toggle -->
                         <button class="action-btn mobile-search-toggle d-lg-none" type="button" data-bs-toggle="collapse" data-bs-target="#mobileSearch" aria-expanded="false" aria-controls="mobileSearch">
                             <i class="bi bi-search"></i>
-                        </button>
-
-                        <!-- Account -->
-                        <div class="dropdown">
-                            <button class="action-btn" data-bs-toggle="dropdown" aria-label="Account">
-                                <i class="bi bi-person-circle"></i>
-                            </button>
-                            <div class="dropdown-menu account-flyout">
-                                <div class="flyout-header">
-                                    <h6>Welcome Back</h6>
-                                    <p>Log in for a personalized experience</p>
-                                </div>
-                                <div class="flyout-actions">
-                                    <a href="login.html" class="btn btn-primary-action">Log In</a>
-                                    <a href="register.html" class="btn btn-outline-action">Register</a>
-                                </div>
-                                <div class="flyout-links">
-                                    <a href="orders.html">
-                                        <i class="bi bi-receipt"></i>
-                                        <span>Order History</span>
-                                    </a>
-                                    <a href="wishlist.html">
-                                        <i class="bi bi-bookmark-heart"></i>
-                                        <span>Favorites</span>
-                                    </a>
-                                    <a href="returns.html">
-                                        <i class="bi bi-arrow-counterclockwise"></i>
-                                        <span>Returns &amp; Exchanges</span>
-                                    </a>
-                                    <a href="help.html">
-                                        <i class="bi bi-life-preserver"></i>
-                                        <span>Support Center</span>
-                                    </a>
-                                </div>
-                            </div>
-                        </div>
-
+                        </button> */ ?>
                         <?php if (isset($cart)): ?>
                         <!-- Cart -->
                         <div class="dropdown" id="header-cart">
@@ -184,7 +156,6 @@
                             </div>
                         </div>
                         <?php endif ?>
-
                         <!-- Mobile Navigation Toggle -->
                         <i class="mobile-nav-toggle d-xl-none bi bi-list me-0"></i>
                     </div>
@@ -192,7 +163,7 @@
             </div>
         </div>
     </div>
-    <!-- Mobile Search Form -->
+    <?php /* !-- Mobile Search Form -->
     <div class="collapse" id="mobileSearch">
         <div class="container-fluid container-xl">
             <form class="mobile-search">
@@ -202,108 +173,59 @@
                 </div>
             </form>
         </div>
-    </div>
+    </div> */ ?>
 </header>
 <?= $this->renderSection('content') ?>
 <footer id="footer" class="footer">
     <div class="footer-main">
         <div class="container">
             <div class="row gy-4">
+                <pre>
+                    <?php @print_r($site); ?>
+                </pre>
                 <div class="col-lg-3 col-md-6 col-sm-12">
                     <div class="footer-widget footer-about">
-                        <a href="#" class="logo">
-                            <span class="sitename">ShopWise</span>
+                        <a href="<?= $homeUrl ?>" class="logo">
+                            <span class="sitename"><?= esc((isset($business_name) ? $business_name : lang('System.site-title'))) ?></span>
                         </a>
-                        <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Nullam in nibh vehicula, facilisis magna ut, consectetur lorem.</p>
-                        <div class="footer-contact mt-4">
-                            <div class="contact-item">
-                                <i class="bi bi-geo-alt"></i>
-                                <span>123 Fashion Street, New York, NY 10001</span>
-                            </div>
-                            <div class="contact-item">
-                                <i class="bi bi-telephone"></i>
-                                <span>+1 (555) 123-4567</span>
-                            </div>
-                            <div class="contact-item">
-                                <i class="bi bi-envelope"></i>
-                                <span>hello@example.com</span>
-                            </div>
-                        </div>
                     </div>
                 </div>
-
                 <div class="col-lg-2 col-md-6 col-sm-6">
                     <div class="footer-widget">
-                        <h4>Shop</h4>
-                        <ul class="footer-links">
-                            <li><a href="category.html">New Arrivals</a></li>
-                            <li><a href="category.html">Bestsellers</a></li>
-                            <li><a href="category.html">Women's Clothing</a></li>
-                            <li><a href="category.html">Men's Clothing</a></li>
-                            <li><a href="category.html">Accessories</a></li>
-                            <li><a href="category.html">Sale</a></li>
-                        </ul>
-                    </div>
-                </div>
-
-                <div class="col-lg-2 col-md-6 col-sm-6">
-                    <div class="footer-widget">
-                        <h4>Support</h4>
-                        <ul class="footer-links">
-                            <li><a href="support.html">Help Center</a></li>
-                            <?php if (isset($business_slug)): ?>
+                        <?php if (isset($business_slug)): ?>
+                            <h4><?= lang('Business.your-orders') ?></h4>
+                            <ul class="footer-links">
                                 <li><a href="<?= esc(base_url(rawurlencode($business_slug) . '/check-order-status'), 'attr') ?>"><?= lang('Business.order-status.title') ?></a></li>
                                 <li><a href="<?= esc(base_url(rawurlencode($business_slug) . '/my-order-history'), 'attr') ?>"><?= lang('Business.order-history.title') ?></a></li>
-                            <?php else: ?>
-                                <li><a href="account.html">Order Status</a></li>
-                            <?php endif ?>
-                            <li><a href="shiping-info.html">Shipping Info</a></li>
-                            <li><a href="return-policy.html">Returns &amp; Exchanges</a></li>
-                            <li><a href="#">Size Guide</a></li>
-                            <li><a href="contact.html">Contact Us</a></li>
-                        </ul>
+                            </ul>
+                        <?php else: ?>
+                            <h4>???</h4>
+                            something OtterNova
+                        <?php endif ?>
                     </div>
                 </div>
-
                 <div class="col-lg-2 col-md-6 col-sm-6">
                     <div class="footer-widget">
-                        <h4>Company</h4>
-                        <ul class="footer-links">
-                            <li><a href="about.html">About Us</a></li>
-                            <li><a href="about.html">Careers</a></li>
-                            <li><a href="about.html">Press</a></li>
-                            <li><a href="about.html">Affiliates</a></li>
-                            <li><a href="about.html">Responsibility</a></li>
-                            <li><a href="about.html">Investors</a></li>
-                        </ul>
+                        <?php if (isset($business_slug)): ?>
+                            <h4><?= lang('Business.links') ?></h4>
+                            <ul class="footer-links">
+                                <li><a href="<?= esc(base_url(rawurlencode($business_slug) . '/check-order-status'), 'attr') ?>"><?= lang('Business.order-status.title') ?></a></li>
+                            </ul>
+                        <?php endif; ?>
                     </div>
                 </div>
-
+                <div class="col-lg-2 col-md-6 col-sm-6">
+                    <div class="footer-widget">
+                        <?php if (isset($business_slug)): ?>
+                            <h4><?= lang('Business.about') ?></h4>
+                            <ul class="footer-links">
+                                <li><a href="?hl=<?= $langRow['code'] ?>"><?= $langRow['name'] ?></a></li>
+                            </ul>
+                        <?php endif; ?>
+                    </div>
+                </div>
                 <div class="col-lg-3 col-md-6 col-sm-6">
                     <div class="footer-widget">
-                        <h4>Download Our App</h4>
-                        <p>Shop on the go with our mobile app</p>
-                        <div class="app-buttons">
-                            <a href="#" class="app-btn">
-                                <i class="bi bi-apple"></i>
-                                <span>App Store</span>
-                            </a>
-                            <a href="#" class="app-btn">
-                                <i class="bi bi-google-play"></i>
-                                <span>Google Play</span>
-                            </a>
-                        </div>
-                        <div class="social-links mt-4">
-                            <h5>Follow Us</h5>
-                            <div class="social-icons">
-                                <a href="#" aria-label="Facebook"><i class="bi bi-facebook"></i></a>
-                                <a href="#" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
-                                <a href="#" aria-label="Twitter"><i class="bi bi-twitter-x"></i></a>
-                                <a href="#" aria-label="TikTok"><i class="bi bi-tiktok"></i></a>
-                                <a href="#" aria-label="Pinterest"><i class="bi bi-pinterest"></i></a>
-                                <a href="#" aria-label="YouTube"><i class="bi bi-youtube"></i></a>
-                            </div>
-                        </div>
                     </div>
                 </div>
             </div>

@@ -12,6 +12,7 @@ class Home extends BaseController
         $data   = [
             'locale' => $locale,
             'slug'   => 'home',
+            'css'    => listDefaultThemeVariables()
         ];
         return view('home', $data);
     }
