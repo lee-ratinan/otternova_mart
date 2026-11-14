@@ -275,6 +275,13 @@ return [
         'for'              => 'For: {0}',
         'contact'          => 'Contact',
         'continue'         => 'Continue Shopping',
+        'paid-title'       => 'Already paid?',
+        'paid-help'        => 'Tell the shop: give the transfer reference, or attach the slip, or both. The shop checks it and confirms your order.',
+        'reference'        => 'Transfer reference',
+        'slip'             => 'Slip (photo or PDF)',
+        'paid-button'      => 'I have paid',
+        'reported'         => 'You have told the shop you paid. It will confirm your order once it has checked the payment.',
+        'reported-thanks'  => 'Thank you. The shop will check your payment.',
         'keep'             => 'Please note your order number. This page is available in this browser only.',
     ],
 ];

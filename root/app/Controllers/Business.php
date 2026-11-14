@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use CodeIgniter\Exceptions\PageNotFoundException;
+use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
 use NumberFormatter;
 use RuntimeException;
@@ -462,9 +463,21 @@ class Business extends BaseController
      * @param string $orderNumber the business's number of the order (IN2611-0001); its public_id is never shown
      * @return string
      */
-    public function payment(string $businessSlug, string $orderNumber): string
+    public function payment(string $businessSlug, string $orderNumber): string|RedirectResponse
     {
         $locale = $this->request->getLocale();
+        // the link of the order's confirmation email carries its key: kept in this browser, then out of the address
+        $given = $this->request->getGet('key');
+        if (is_string($given) && $given !== '' && strlen($given) <= 128) {
+            [$code] = $this->fetchApi('v1/mart/order', ['business_slug' => $businessSlug, 'lang' => $locale, 'number' => $orderNumber, 'key' => $given]);
+            if ($code === 200) {
+                $orders                               = (array) session()->get('orders');
+                $orders[$businessSlug][$orderNumber] = $given;
+                session()->set('orders', $orders);
+            }
+
+            return redirect()->to($this->businessUrl($businessSlug, 'payment/' . rawurlencode($orderNumber)));
+        }
         $site   = $this->site($businessSlug, $locale);
         $key    = session()->get('orders')[$businessSlug][$orderNumber] ?? null;
         if (! is_string($key)) {
@@ -490,6 +503,31 @@ class Business extends BaseController
             'just_placed'      => session()->getFlashdata('order_placed') === $orderNumber,
             'home_url'         => $this->businessUrl($businessSlug, ''),
         ]);
+    }
+
+    /**
+     * POST: the customer says they paid the order (this browser has its key): the transfer reference and/or the
+     * slip go to v1/mart/order/report-payment, for the shop to check; back to the payment page with how it went
+     */
+    public function reportPayment(string $businessSlug, string $orderNumber): RedirectResponse
+    {
+        $back = $this->businessUrl($businessSlug, 'payment/' . rawurlencode($orderNumber));
+        $key  = session()->get('orders')[$businessSlug][$orderNumber] ?? null;
+        if (! is_string($key)) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+        $fields = ['business_slug' => $businessSlug, 'lang' => $this->request->getLocale(), 'number' => $orderNumber, 'key' => $key,
+            'reference' => mb_substr($this->postText('reference'), 0, 100)];
+        $file   = $this->request->getFile('slip');
+        if ($file !== null && $file->isValid() && ! $file->hasMoved()) {
+            $fields['slip'] = new \CURLFile($file->getTempName(), (string) $file->getMimeType(), 'slip');
+        }
+        [$code, $body] = $this->callApiMultipart('v1/mart/order/report-payment', $fields);
+        if ($code === 200) {
+            return redirect()->to($back)->with('payment_reported', (string) ($body['message'] ?? lang('Business.payment.reported-thanks')));
+        }
+
+        return redirect()->to($back)->with('payment_report_error', (string) ($body['message'] ?? lang('Business.cart.try-again')));
     }
 
     public function checkOrderStatus(string $businessSlug, string $orderPublicId): string
@@ -640,7 +678,7 @@ class Business extends BaseController
             }
             $names = $this->request->getPost('participants');
             if ($line['kind'] !== 'P') {
-                $line['participants'] = $this->participants(is_array($names) ? $names : $line['participants'], $line['quantity']);
+                $line['participants'] = $this->participants(is_array($names) ? $names : $line['participants'], self::seatsOf($line));
             }
         } catch (\DomainException|RuntimeException $e) {
             return $this->cartFailure($businessSlug, $site, $e, $lines[$index]);
@@ -1147,7 +1185,9 @@ class Business extends BaseController
             'starts_at'    => $slot['starts_at'],
             'ends_at'      => $slot['ends_at'],
             'staff'        => $wanted,
-            'participants' => [''],
+            // one name for each customer the booking is for: 2 for a couples massage
+            'people'       => max(1, (int) ($service['variant']['people'] ?? 1)),
+            'participants' => array_fill(0, max(1, (int) ($service['variant']['people'] ?? 1)), ''),
         ];
 
         return $this->placeLine($lines, $line, null);
@@ -1341,6 +1381,14 @@ class Business extends BaseController
      * Names of the participants, one a seat: trimmed, cut to NAME_LENGTH, and as many as the seats
      * @return list<string>
      */
+    /**
+     * The names a booking line needs: an appointment's people (an older cart line has none: 1), a session's seats
+     */
+    private static function seatsOf(array $line): int
+    {
+        return $line['kind'] === 'A' ? max(1, (int) ($line['people'] ?? 1)) : (int) $line['quantity'];
+    }
+
     private function participants(array $names, int $seats): array
     {
         $names = array_map(static fn ($name): string => is_string($name) ? mb_substr(trim(preg_replace('/\s+/u', ' ', $name)), 0, self::NAME_LENGTH) : '', array_values($names));

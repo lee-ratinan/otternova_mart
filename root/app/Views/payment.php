@@ -75,6 +75,31 @@ $status   = ['P' => ['warning', 'hourglass-split'], 'C' => ['success', 'check-ci
                         <?php elseif ($payment['handler_code'] !== 'promptpay_qr'): ?>
                             <p class="mt-3"><?= lang('Business.payment.no-instruction') ?></p>
                         <?php endif ?>
+                        <?php if (session()->getFlashdata('payment_reported')): ?>
+                            <div class="alert alert-success mt-3 mb-0"><?= esc(session()->getFlashdata('payment_reported')) ?></div>
+                        <?php endif ?>
+                        <?php if (session()->getFlashdata('payment_report_error')): ?>
+                            <div class="alert alert-danger mt-3 mb-0"><?= esc(session()->getFlashdata('payment_report_error')) ?></div>
+                        <?php endif ?>
+                        <?php if ($order['status'] === 'P' && ! empty($payment['reported_at'])): ?>
+                            <p class="mt-3 mb-0"><i class="bi bi-hourglass-split"></i> <?= lang('Business.payment.reported') ?></p>
+                        <?php elseif ($order['status'] === 'P' && $payment['method_code'] !== 'cash'): ?>
+                            <!-- the customer says they paid: the shop checks it and marks it received -->
+                            <form class="mt-4" method="post" action="<?= esc(base_url(rawurlencode($business_slug) . '/payment/' . rawurlencode($order['number']) . '/report'), 'attr') ?>" enctype="multipart/form-data">
+                                <?= csrf_field() ?>
+                                <h5><?= lang('Business.payment.paid-title') ?></h5>
+                                <p class="note"><?= lang('Business.payment.paid-help') ?></p>
+                                <div class="mb-2">
+                                    <label class="form-label" for="pay-reference"><?= lang('Business.payment.reference') ?></label>
+                                    <input type="text" class="form-control" id="pay-reference" name="reference" maxlength="100" autocomplete="off">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="pay-slip"><?= lang('Business.payment.slip') ?></label>
+                                    <input type="file" class="form-control" id="pay-slip" name="slip" accept="image/jpeg,image/png,image/webp,application/pdf">
+                                </div>
+                                <button type="submit" class="btn btn-primary"><i class="bi bi-send-check"></i> <?= lang('Business.payment.paid-button') ?></button>
+                            </form>
+                        <?php endif ?>
                         <p class="note mt-4 mb-0"><i class="bi bi-info-circle"></i> <?= lang('Business.payment.keep') ?></p>
                     </div>
                 </div>

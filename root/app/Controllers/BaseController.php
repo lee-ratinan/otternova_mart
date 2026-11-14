@@ -71,6 +71,15 @@ abstract class BaseController extends Controller
         return $this->callApi('POST', $endpoint, ['json' => $body]);
     }
 
+    /**
+     * POST multipart/form-data (a file among the fields, as a CURLFile)
+     * @return array{int, array} as fetchApi()
+     */
+    protected function callApiMultipart(string $endpoint, array $fields): array
+    {
+        return $this->callApi('POST', $endpoint, ['multipart' => $fields]);
+    }
+
     /** @return array{int, array} as fetchApi() */
     private function callApi(string $method, string $endpoint, array $options): array
     {

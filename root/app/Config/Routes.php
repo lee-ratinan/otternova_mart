@@ -23,6 +23,8 @@ $routes->get('(:any)/cart', 'Business::cart/$1');
 $routes->get('(:any)/checkout', 'Business::checkout/$1');
 // an order's payment, for the browser that placed it
 $routes->get('(:any)/payment/(:any)', 'Business::payment/$1/$2');
+// the customer says they paid it (a reference, a slip)
+$routes->post('(:any)/payment/(:any)/report', 'Business::reportPayment/$1/$2');
 // check my order status
 $routes->get('(:any)/check-order-status/(:any)', 'Business::checkOrderStatus/$1/$2');
 $routes->get('(:any)/my-order-history', 'Business::myOrderHistory/$1');
