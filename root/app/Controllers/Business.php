@@ -578,13 +578,131 @@ class Business extends BaseController
         ]);
     }
 
-    public function myOrderHistory(string $businessSlug, string $customerPublicId): string
+    /**
+     * My order history: the orders the customer placed with this business by their email address, once they opened
+     * the link emailed to it (openOrderHistory()); the session v1/mart/order-history/open gave stays in this browser's
+     * session, never in an address. Without one, or once it is over, the form asking for the link.
+     * @param string $businessSlug
+     * @return string|ResponseInterface
+     */
+    public function myOrderHistory(string $businessSlug): string|ResponseInterface
     {
+        $locale  = $this->request->getLocale();
+        $site    = $this->site($businessSlug, $locale);
+        $page    = $this->historyPage($site, $businessSlug, $locale);
+        $session = session()->get('order_history')[$businessSlug] ?? null;
+        if (is_string($session)) {
+            [$code, $body] = $this->postApi('v1/mart/order-history', ['business_slug' => $businessSlug, 'lang' => $locale, 'session' => $session]);
+            if ($code === 200 && is_array($body['data']['orders'] ?? null)) {
+                $orders = array_map(fn (array $order): array => [
+                    'number'           => $order['order_number'],
+                    'placed'           => $this->moment($order['created_at'], $locale),
+                    'total'            => $this->money((float) $order['total'], (string) $order['currency'], $locale),
+                    'order_status'     => $order['cancelled'] ? 'cancelled' : $order['order_status'],
+                    'financial_status' => $order['financial_status'],
+                ], $body['data']['orders']);
+
+                return $this->noStore(view('myOrderHistory', $page + [
+                    'mode'     => 'list',
+                    'email'    => (string) $body['data']['email'],
+                    'orders'   => $orders,
+                    'sign_out' => $this->businessUrl($businessSlug, 'my-order-history/sign-out'),
+                    'lookup'   => $this->businessUrl($businessSlug, 'check-order-status'),
+                ]));
+            }
+            if ($code !== 503) {
+                $this->forgetHistory($businessSlug);
+                $page['error'] = lang('Business.order-history.ended');
+            } else {
+                $page['error'] = lang('Business.cart.try-again');
+            }
+        }
+
+        return $this->noStore(view('myOrderHistory', $page + [
+            'mode'   => 'form',
+            'error'  => $page['error'] ?? session()->getFlashdata('history_error'),
+            'sent'   => session()->getFlashdata('history_sent'),
+            'email'  => (string) (session()->getFlashdata('history_email') ?? ''),
+            'action' => $this->businessUrl($businessSlug, 'retrieve-order-history'),
+        ]));
+    }
+
+    /**
+     * The emailed link (?token=): the token is kept in this browser's session and taken out of the address at once;
+     * then a page with a button that opens the history (confirmOrderHistory()). Opening it on a GET would let the
+     * link checkers of mail services, which open every link, use up the single-use link before the customer does.
+     * @param string $businessSlug
+     * @return string|ResponseInterface
+     */
+    public function openOrderHistory(string $businessSlug): string|ResponseInterface
+    {
+        $token = $this->request->getGet('token');
+        if (is_string($token)) {
+            if ($token !== '' && strlen($token) <= 128) {
+                $links                = session()->get('order_history_link') ?? [];
+                $links[$businessSlug] = $token;
+                session()->set('order_history_link', $links);
+            }
+
+            return redirect()->to($this->businessUrl($businessSlug, 'my-order-history/open'))
+                ->setHeader('Referrer-Policy', 'no-referrer')->setHeader('Cache-Control', 'no-store');
+        }
         $locale = $this->request->getLocale();
-        $data   = [
-            'locale' => $locale,
-        ];
-        return view('myOrderHistory', $data);
+        $site   = $this->site($businessSlug, $locale);
+        if (! is_string(session()->get('order_history_link')[$businessSlug] ?? null)) {
+            return redirect()->to($this->businessUrl($businessSlug, 'my-order-history'));
+        }
+
+        return $this->noStore(view('myOrderHistory', $this->historyPage($site, $businessSlug, $locale) + [
+            'mode'   => 'open',
+            'action' => $this->businessUrl($businessSlug, 'my-order-history/open'),
+        ]));
+    }
+
+    /**
+     * POST from the emailed link's page: its token (from this browser's session) for a history session
+     * (v1/mart/order-history/open), kept in a renewed session; then the history. A link used or expired: the form.
+     * @param string $businessSlug
+     * @return RedirectResponse
+     */
+    public function confirmOrderHistory(string $businessSlug): RedirectResponse
+    {
+        $history = $this->businessUrl($businessSlug, 'my-order-history');
+        $links   = session()->get('order_history_link') ?? [];
+        $token   = $links[$businessSlug] ?? null;
+        unset($links[$businessSlug]);
+        session()->set('order_history_link', $links);
+        if (! is_string($token)) {
+            return redirect()->to($history);
+        }
+        [$code, $body] = $this->postApi('v1/mart/order-history/open', ['business_slug' => $businessSlug, 'token' => $token]);
+        if ($code === 200 && is_string($body['data']['session'] ?? null)) {
+            // a new session id for what is now signed in
+            session()->regenerate(true);
+            $sessions                = session()->get('order_history') ?? [];
+            $sessions[$businessSlug] = $body['data']['session'];
+            session()->set('order_history', $sessions);
+
+            return redirect()->to($history);
+        }
+
+        return redirect()->to($history)->with('history_error', $code === 404 ? lang('Business.order-history.link-invalid') : lang('Business.cart.try-again'));
+    }
+
+    /**
+     * POST: the customer leaves their order history; the session ends at the API too
+     * @param string $businessSlug
+     * @return RedirectResponse
+     */
+    public function signOutOrderHistory(string $businessSlug): RedirectResponse
+    {
+        $session = session()->get('order_history')[$businessSlug] ?? null;
+        if (is_string($session)) {
+            $this->postApi('v1/mart/order-history/close', ['business_slug' => $businessSlug, 'session' => $session]);
+        }
+        $this->forgetHistory($businessSlug);
+
+        return redirect()->to($this->businessUrl($businessSlug, 'my-order-history'));
     }
 
     public function showBusinessPages(string $businessSlug, string $pagePublicId): string
@@ -904,9 +1022,54 @@ class Business extends BaseController
         session()->set('order_lookups', $lookups);
     }
 
-    public function retrieveOrderHistory(string $businessSlug): ResponseInterface
+    /**
+     * POST from the my-order-history form: email. v1/mart/order-history/request emails a link into the history when
+     * the business has orders with the address; the page says the same either way, so no one learns who ordered.
+     * @param string $businessSlug
+     * @return RedirectResponse
+     */
+    public function retrieveOrderHistory(string $businessSlug): RedirectResponse
     {
-        return $this->response->setJSON([]);
+        $email = mb_substr($this->postText('email'), 0, 64);
+        $back  = redirect()->to($this->businessUrl($businessSlug, 'my-order-history'))->with('history_email', $email);
+        if ($email === '' || filter_var($email, FILTER_VALIDATE_EMAIL) === false) {
+            return $back->with('history_error', lang('Business.order-history.email-invalid'));
+        }
+        [$code] = $this->postApi('v1/mart/order-history/request', ['business_slug' => $businessSlug, 'lang' => $this->request->getLocale(), 'email' => $email]);
+
+        return match ($code) {
+            200     => $back->with('history_sent', $email),
+            422     => $back->with('history_error', lang('Business.order-history.email-invalid')),
+            429     => $back->with('history_error', lang('Business.order-history.blocked')),
+            default => $back->with('history_error', lang('Business.cart.try-again')),
+        };
+    }
+
+    /** What every my-order-history page needs */
+    private function historyPage(array $site, string $businessSlug, string $locale): array
+    {
+        return $this->layout($site, $businessSlug, $locale) + [
+            'page_title'       => lang('Business.order-history.title'),
+            'business_name'    => $site['business']['name'],
+            'meta_description' => $site['meta']['description'],
+            'meta_keywords'    => $site['meta']['keywords'],
+            'site'             => $site,
+            'home_url'         => $this->businessUrl($businessSlug, ''),
+        ];
+    }
+
+    /** A page of someone's own orders: kept by no cache, and no address of it passed on to another site */
+    private function noStore(string $html): ResponseInterface
+    {
+        return $this->response->setBody($html)->setHeader('Cache-Control', 'no-store, private')->setHeader('Referrer-Policy', 'no-referrer');
+    }
+
+    /** Forget this browser's order history session at the business */
+    private function forgetHistory(string $businessSlug): void
+    {
+        $sessions = session()->get('order_history') ?? [];
+        unset($sessions[$businessSlug]);
+        session()->set('order_history', $sessions);
     }
 
     /** Characters of the description shown beside the pictures before "Read more" */

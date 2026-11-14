@@ -28,7 +28,11 @@ $routes->post('(:any)/payment/(:any)/report', 'Business::reportPayment/$1/$2');
 // check my order status
 $routes->get('(:any)/check-order-status', 'Business::checkOrderStatus/$1'); // the form: order number + email or telephone
 $routes->get('(:any)/check-order-status/(:any)', 'Business::checkOrderStatus/$1/$2'); // the order, once this browser has matched them
+// my order history: asked for by email address, opened by the emailed link
 $routes->get('(:any)/my-order-history', 'Business::myOrderHistory/$1');
+$routes->get('(:any)/my-order-history/open', 'Business::openOrderHistory/$1');
+$routes->post('(:any)/my-order-history/open', 'Business::confirmOrderHistory/$1');
+$routes->post('(:any)/my-order-history/sign-out', 'Business::signOutOrderHistory/$1');
 // other businesses' page
 $routes->get('(:any)/pages/(:any)', 'Business::showBusinessPages/$1/$2');
 // business main page
