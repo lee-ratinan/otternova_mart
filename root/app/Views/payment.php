@@ -8,12 +8,16 @@
  * @var array  $site
  * @var array  $order       as Business::orderView() makes it
  * @var bool   $just_placed the customer has just placed it
+ * @var bool   $looked_up   found by its number and contact (Business::checkOrderStatus()), not by its key: the
+ *                          order's status only, as telling the shop it was paid needs the key
  * @var string $home_url
  */
 $this->extend('_layout_otternova');
 
 $business = $site['business'];
 $payment  = $order['payment'];
+$looked_up ??= false;
+$title    = $looked_up ? lang('Business.order-status.title') : lang('Business.payment.title');
 $status   = ['P' => ['warning', 'hourglass-split'], 'C' => ['success', 'check-circle'], 'X' => ['secondary', 'x-circle']][$order['status']] ?? ['secondary', 'info-circle'];
 ?>
 <?= $this->section('content') ?>
@@ -33,11 +37,16 @@ $status   = ['P' => ['warning', 'hourglass-split'], 'C' => ['success', 'check-ci
     </style>
     <div class="page-title light-background">
         <div class="container d-lg-flex justify-content-between align-items-center">
-            <h1 class="mb-2 mb-lg-0"><?= lang('Business.payment.title') ?></h1>
+            <h1 class="mb-2 mb-lg-0"><?= $title ?></h1>
             <nav class="breadcrumbs">
                 <ol>
                     <li><a href="<?= esc($home_url, 'attr') ?>"><?= esc($business['name']) ?></a></li>
-                    <li class="current"><?= lang('Business.payment.title') ?></li>
+                    <?php if ($looked_up): ?>
+                        <li><a href="<?= esc(base_url(rawurlencode($business_slug) . '/check-order-status'), 'attr') ?>"><?= $title ?></a></li>
+                        <li class="current"><?= esc($order['number']) ?></li>
+                    <?php else: ?>
+                        <li class="current"><?= $title ?></li>
+                    <?php endif ?>
                 </ol>
             </nav>
         </div>
@@ -83,7 +92,7 @@ $status   = ['P' => ['warning', 'hourglass-split'], 'C' => ['success', 'check-ci
                         <?php endif ?>
                         <?php if ($order['status'] === 'P' && ! empty($payment['reported_at'])): ?>
                             <p class="mt-3 mb-0"><i class="bi bi-hourglass-split"></i> <?= lang('Business.payment.reported') ?></p>
-                        <?php elseif ($order['status'] === 'P' && $payment['method_code'] !== 'cash'): ?>
+                        <?php elseif ($order['status'] === 'P' && $payment['method_code'] !== 'cash' && ! $looked_up): ?>
                             <!-- the customer says they paid: the shop checks it and marks it received -->
                             <form class="mt-4" method="post" action="<?= esc(base_url(rawurlencode($business_slug) . '/payment/' . rawurlencode($order['number']) . '/report'), 'attr') ?>" enctype="multipart/form-data">
                                 <?= csrf_field() ?>
@@ -100,7 +109,11 @@ $status   = ['P' => ['warning', 'hourglass-split'], 'C' => ['success', 'check-ci
                                 <button type="submit" class="btn btn-primary"><i class="bi bi-send-check"></i> <?= lang('Business.payment.paid-button') ?></button>
                             </form>
                         <?php endif ?>
-                        <p class="note mt-4 mb-0"><i class="bi bi-info-circle"></i> <?= lang('Business.payment.keep') ?></p>
+                        <?php if ($looked_up && $order['status'] === 'P' && empty($payment['reported_at']) && $payment['method_code'] !== 'cash'): ?>
+                            <p class="note mt-4 mb-0"><i class="bi bi-envelope"></i> <?= lang('Business.order-status.keep') ?></p>
+                        <?php elseif (! $looked_up): ?>
+                            <p class="note mt-4 mb-0"><i class="bi bi-info-circle"></i> <?= lang('Business.payment.keep') ?></p>
+                        <?php endif ?>
                     </div>
                 </div>
                 <div class="col-lg-6">
@@ -148,6 +161,9 @@ $status   = ['P' => ['warning', 'hourglass-split'], 'C' => ['success', 'check-ci
                         <p class="note mb-0"><?= esc($order['customer']['first_name'] . ' ' . $order['customer']['last_name']) ?> · <?= esc($order['customer']['email']) ?> · <?= esc($order['customer']['telephone']) ?></p>
                     </div>
                     <a href="<?= esc($home_url, 'attr') ?>" class="btn btn-outline-secondary mt-3"><i class="bi bi-arrow-left"></i> <?= lang('Business.payment.continue') ?></a>
+                    <?php if ($looked_up): ?>
+                        <a href="<?= esc(base_url(rawurlencode($business_slug) . '/check-order-status'), 'attr') ?>" class="btn btn-outline-secondary mt-3 ms-2"><i class="bi bi-search"></i> <?= lang('Business.order-status.another') ?></a>
+                    <?php endif ?>
                 </div>
             </div>
         </div>

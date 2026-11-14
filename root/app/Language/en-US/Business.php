@@ -284,4 +284,18 @@ return [
         'reported-thanks'  => 'Thank you. The shop will check your payment.',
         'keep'             => 'Please note your order number. This page is available in this browser only.',
     ],
+    'order-status'       => [
+        'title'        => 'Check Order Status',
+        'intro'        => 'Enter your order number with the email address or telephone number you placed the order with.',
+        'number'       => 'Order number',
+        'number-hint'  => 'As in your order confirmation, e.g. IN2611-0001',
+        'contact'      => 'Email address or telephone number',
+        'submit'       => 'Check Status',
+        'required'     => 'Please enter both your order number and your email address or telephone number.',
+        'not-found'    => 'We could not find an order with this order number and email address or telephone number. Please check them and try again.',
+        'blocked'      => 'Too many tries for this order number. Please wait a few minutes and try again.',
+        'other-shop'   => 'Orders can be checked only at the shop they were placed with.',
+        'another'      => 'Check another order',
+        'keep'         => 'To tell the shop you have paid, open the link in your order confirmation email.',
+    ],
 ];

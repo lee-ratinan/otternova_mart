@@ -251,7 +251,11 @@
                         <h4>Support</h4>
                         <ul class="footer-links">
                             <li><a href="support.html">Help Center</a></li>
-                            <li><a href="account.html">Order Status</a></li>
+                            <?php if (isset($business_slug)): ?>
+                                <li><a href="<?= esc(base_url(rawurlencode($business_slug) . '/check-order-status'), 'attr') ?>"><?= lang('Business.order-status.title') ?></a></li>
+                            <?php else: ?>
+                                <li><a href="account.html">Order Status</a></li>
+                            <?php endif ?>
                             <li><a href="shiping-info.html">Shipping Info</a></li>
                             <li><a href="return-policy.html">Returns &amp; Exchanges</a></li>
                             <li><a href="#">Size Guide</a></li>

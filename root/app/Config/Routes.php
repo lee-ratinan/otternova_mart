@@ -26,7 +26,8 @@ $routes->get('(:any)/payment/(:any)', 'Business::payment/$1/$2');
 // the customer says they paid it (a reference, a slip)
 $routes->post('(:any)/payment/(:any)/report', 'Business::reportPayment/$1/$2');
 // check my order status
-$routes->get('(:any)/check-order-status/(:any)', 'Business::checkOrderStatus/$1/$2');
+$routes->get('(:any)/check-order-status', 'Business::checkOrderStatus/$1'); // the form: order number + email or telephone
+$routes->get('(:any)/check-order-status/(:any)', 'Business::checkOrderStatus/$1/$2'); // the order, once this browser has matched them
 $routes->get('(:any)/my-order-history', 'Business::myOrderHistory/$1');
 // other businesses' page
 $routes->get('(:any)/pages/(:any)', 'Business::showBusinessPages/$1/$2');

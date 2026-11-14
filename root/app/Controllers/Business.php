@@ -530,13 +530,52 @@ class Business extends BaseController
         return redirect()->to($back)->with('payment_report_error', (string) ($body['message'] ?? lang('Business.cart.try-again')));
     }
 
-    public function checkOrderStatus(string $businessSlug, string $orderPublicId): string
+    /**
+     * Check my order status: the customer, back at the business's mart, gives the order number with the email address
+     * or the telephone number it was placed with (POST /{business}/retrieve-order-status). Once they matched, this
+     * browser keeps them and /{business}/check-order-status/{number} shows the order, as v1/mart/order/lookup finds it,
+     * on the payment page's layout without what needs the order's key (telling the shop it was paid). Otherwise, or
+     * when they no longer match, the form, the number filled in.
+     * @param string      $businessSlug
+     * @param string|null $orderNumber the business's number of the order (IN2611-0001)
+     * @return string|RedirectResponse
+     */
+    public function checkOrderStatus(string $businessSlug, ?string $orderNumber = null): string|RedirectResponse
     {
-        $locale = $this->request->getLocale();
-        $data   = [
-            'locale' => $locale,
+        $locale  = $this->request->getLocale();
+        $site    = $this->site($businessSlug, $locale);
+        $page    = $this->layout($site, $businessSlug, $locale) + [
+            'business_name'    => $site['business']['name'],
+            'meta_description' => $site['meta']['description'],
+            'meta_keywords'    => $site['meta']['keywords'],
+            'site'             => $site,
+            'home_url'         => $this->businessUrl($businessSlug, ''),
         ];
-        return view('checkOrderStatus', $data);
+        $contact = $orderNumber === null ? null : (session()->get('order_lookups')[$businessSlug][$orderNumber] ?? null);
+        if (is_string($contact)) {
+            [$code, $body] = $this->postApi('v1/mart/order/lookup', ['business_slug' => $businessSlug, 'lang' => $locale, 'number' => $orderNumber, 'contact' => $contact]);
+            if ($code === 200 && is_array($body['data']['order'] ?? null)) {
+                $order = $body['data']['order'];
+
+                return view('payment', $page + [
+                    'page_title'  => lang('Business.order-status.title'),
+                    'order'       => $this->orderView($order, (string) $order['currency'], $locale),
+                    'just_placed' => false,
+                    'looked_up'   => true,
+                ]);
+            }
+            if ($code !== 503) {
+                $this->forgetLookup($businessSlug, $orderNumber);
+            }
+        }
+
+        return view('checkOrderStatus', $page + [
+            'page_title' => lang('Business.order-status.title'),
+            'number'     => (string) (session()->getFlashdata('lookup_number') ?? $orderNumber ?? ''),
+            'contact'    => (string) (session()->getFlashdata('lookup_contact') ?? ''),
+            'error'      => session()->getFlashdata('lookup_error'),
+            'action'     => $this->businessUrl($businessSlug, 'retrieve-order-status'),
+        ]);
     }
 
     public function myOrderHistory(string $businessSlug, string $customerPublicId): string
@@ -818,9 +857,51 @@ class Business extends BaseController
         return redirect()->to($back)->with('checkout_error', lang('Business.cart.try-again'));
     }
 
-    public function retrieveOrderStatus(string $businessSlug): ResponseInterface
+    /**
+     * POST from the check-order-status form: number, contact (the email address or the telephone number). Both must
+     * match the same order of this business (v1/mart/order/lookup), so no one finds another's order by its number.
+     * Matched: on to the order (its payment page when this browser placed it). Not: back to the form with why.
+     * @param string $businessSlug
+     * @return RedirectResponse
+     */
+    public function retrieveOrderStatus(string $businessSlug): RedirectResponse
     {
-        return $this->response->setJSON([]);
+        $locale  = $this->request->getLocale();
+        $number  = strtoupper(mb_substr($this->postText('number'), 0, 24));
+        $contact = mb_substr($this->postText('contact'), 0, 64);
+        $back    = fn (string $error): RedirectResponse => redirect()->to($this->businessUrl($businessSlug, 'check-order-status'))
+            ->with('lookup_error', $error)->with('lookup_number', $number)->with('lookup_contact', $contact);
+        if ($number === '' || $contact === '') {
+            return $back(lang('Business.order-status.required'));
+        }
+
+        [$code, $body] = $this->postApi('v1/mart/order/lookup', ['business_slug' => $businessSlug, 'lang' => $locale, 'number' => $number, 'contact' => $contact]);
+        if ($code === 200 && is_string($body['data']['order']['order_number'] ?? null)) {
+            $number = $body['data']['order']['order_number'];
+            // this browser placed it: its own page, where the payment can be told too
+            if (is_string(session()->get('orders')[$businessSlug][$number] ?? null)) {
+                return redirect()->to($this->businessUrl($businessSlug, 'payment/' . rawurlencode($number)));
+            }
+            $lookups                  = session()->get('order_lookups') ?? [];
+            $lookups[$businessSlug]   = array_slice([$number => $contact] + ($lookups[$businessSlug] ?? []), 0, 20, true);
+            session()->set('order_lookups', $lookups);
+
+            return redirect()->to($this->businessUrl($businessSlug, 'check-order-status/' . rawurlencode($number)));
+        }
+
+        return $back(match ($code) {
+            404, 422 => lang('Business.order-status.not-found'),
+            429      => lang('Business.order-status.blocked'),
+            default  => lang('Business.cart.try-again'),
+        });
+    }
+
+    /** Forget an order this browser had looked up, as its contact no longer finds it */
+    private function forgetLookup(string $businessSlug, string $orderNumber): void
+    {
+        $lookups = session()->get('order_lookups') ?? [];
+        unset($lookups[$businessSlug][$orderNumber]);
+        session()->set('order_lookups', $lookups);
     }
 
     public function retrieveOrderHistory(string $businessSlug): ResponseInterface
