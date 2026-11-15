@@ -6,18 +6,20 @@ class Home extends BaseController
 {
 
     /**
-     * Home page
-     * TODO: Still no idea what to do
+     * OtterNovaMart's own home page: what the mart is, what customers can do at a shop, how to get back to an
+     * order, and a link to the Otternova site for business owners
+     * TODO: a list of featured shops, once the API can list the businesses that chose to be listed
      * @return string
      */
     public function index(): string
     {
-        // still no real idea what I should do with this page
         $locale = $this->request->getLocale();
         $data   = [
-            'locale' => $locale,
-            'slug'   => 'home',
-            'css'    => listDefaultThemeVariables()
+            'locale'           => $locale,
+            'slug'             => 'home',
+            'css'              => listDefaultThemeVariables($locale),
+            'meta_description' => lang('System.home.meta-description'),
+            'www_url'          => rtrim((string) (getenv('LINK_WWW') ?: 'https://otternova.com/'), '/') . '/home',
         ];
         return view('home', $data);
     }
