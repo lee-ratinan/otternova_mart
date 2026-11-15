@@ -30,7 +30,7 @@ $json     = static fn ($value): string => json_encode($value, JSON_HEX_TAG | JSO
         .cart .summary-card .names-needed { font-size: 13px; color: #b45309; margin-top: 10px; }
         .cart .charges-note { font-size: 13px; color: color-mix(in srgb, var(--default-color), transparent 35%); margin: 10px 0 0; }
         .cart .empty-cart { text-align: center; padding: 48px 16px; }
-        .cart .empty-cart i { font-size: 48px; color: color-mix(in srgb, var(--default-color), transparent 70%); }
+        .cart .empty-cart i.bi-bag { font-size: 48px; color: color-mix(in srgb, var(--default-color), transparent 70%); }
     </style>
     <div class="page-title light-background">
         <div class="container d-lg-flex justify-content-between align-items-center">
@@ -55,7 +55,9 @@ $json     = static fn ($value): string => json_encode($value, JSON_HEX_TAG | JSO
                 <div class="empty-cart">
                     <i class="bi bi-bag"></i>
                     <p class="mt-3"><?= lang('Business.cart.empty') ?></p>
-                    <a href="<?= esc($urls['home'], 'attr') ?>" class="btn btn-outline-secondary"><i class="bi bi-arrow-left"></i> <?= lang('Business.cart.browse') ?></a>
+                    <a href="<?= esc($urls['home'], 'attr') ?>" class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> <?= lang('Business.cart.browse') ?>
+                    </a>
                 </div>
             <?php else: ?>
             <div class="row gy-5">

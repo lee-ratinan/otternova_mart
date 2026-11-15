@@ -579,6 +579,99 @@ class Business extends BaseController
     }
 
     /**
+     * Contact us: how to reach the business, and each of its stores with its address, telephone number and place on
+     * Google Maps (the link the business set, else a search for the address)
+     * @param string $businessSlug
+     * @return string
+     */
+    public function contactUs(string $businessSlug): string
+    {
+        helper('html');
+        $locale   = $this->request->getLocale();
+        $site     = $this->site($businessSlug, $locale);
+        $country  = (string) $site['business']['country_code'];
+        $contact  = is_array($site['business']['contact'] ?? null) ? $site['business']['contact'] : [];
+        $website  = trim((string) ($contact['website'] ?? ''));
+        if ($website !== '' && ! preg_match('#^https?://#i', $website)) {
+            $website = 'https://' . $website;
+        }
+        $stores = array_map(function (array $store) use ($country): array {
+            $lines = $this->addressLines($store, $country);
+
+            return [
+                'name'     => (string) $store['name'],
+                'online'   => $store['type'] === 'O',
+                'address'  => $lines,
+                'phone'    => $this->phone($store['phone_number'] ?? null),
+                'maps_url' => $store['type'] === 'O' ? null : $this->mapsUrl($store['google_maps_url'] ?? null, $store['name'], $lines),
+            ];
+        }, is_array($site['stores'] ?? null) ? $site['stores'] : []);
+        // the stores people can visit first, each group by name as the API gives it
+        usort($stores, static fn (array $a, array $b): int => $a['online'] <=> $b['online']);
+
+        return view('contactUs', $this->layout($site, $businessSlug, $locale) + [
+            'page_title'       => lang('Business.contact-page.title'),
+            'business_name'    => $site['business']['name'],
+            'meta_description' => $site['meta']['description'],
+            'meta_keywords'    => $site['meta']['keywords'],
+            'site'             => $site,
+            'home_url'         => $this->businessUrl($businessSlug, ''),
+            'business_contact' => [
+                'address' => $this->addressLines($contact, $country),
+                'phone'   => $this->phone($contact['phone_number'] ?? null),
+                'email'   => trim((string) ($contact['email_address'] ?? '')),
+                'website' => $website === '' ? null : ['url' => $website, 'label' => preg_replace('#^https?://(www\.)?#i', '', rtrim($website, '/'))],
+            ],
+            'stores'           => $stores,
+        ]);
+    }
+
+    /**
+     * Our staff: the people the business shows on its pages (v1/mart/staff), each with their picture, name, what
+     * they do, the languages they speak, their bio, where they work and the customers they do not serve. A business
+     * that shows no one has no such page.
+     * @param string $businessSlug
+     * @return string
+     * @throws PageNotFoundException When the business shows no one
+     */
+    public function staff(string $businessSlug): string
+    {
+        $locale = $this->request->getLocale();
+        $site   = $this->site($businessSlug, $locale);
+        if (empty($site['business']['shows_staff'])) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+        [$code, $body] = $this->fetchApi('v1/mart/staff', ['business_slug' => $businessSlug, 'lang' => $locale]);
+        if ($code !== 200 || ! is_array($body['data']['staff'] ?? null)) {
+            throw new RuntimeException(lang('Business.load-failed'));
+        }
+        $people = array_map(fn (array $person): array => [
+            'name'         => (string) $person['name'],
+            'initials'     => $this->initials((string) $person['name']),
+            'avatar_url'   => is_string($person['avatar_url'] ?? null) && preg_match('#^https?://#i', $person['avatar_url']) ? $person['avatar_url'] : null,
+            'bio'          => $person['bio'] ?? null,
+            'attributes'   => array_values(array_filter($person['attributes'] ?? [], static fn ($a): bool => is_array($a) && ($a['values'] ?? []) !== [])),
+            'languages'    => array_map(static fn (array $spoken): array => [
+                'name'  => self::languageName((string) $spoken['code'], $locale),
+                'level' => lang('Business.staff-page.proficiency.' . ($spoken['proficiency'] ?? 'F')),
+            ], $person['languages'] ?? []),
+            'restrictions' => $this->restrictionLines($person['restrictions'] ?? null),
+            'stores'       => array_column($person['stores'] ?? [], 'name'),
+        ], $body['data']['staff']);
+
+        return view('staff', $this->layout($site, $businessSlug, $locale) + [
+            'page_title'       => lang('Business.staff-page.title'),
+            'business_name'    => $site['business']['name'],
+            'meta_description' => $site['meta']['description'],
+            'meta_keywords'    => $site['meta']['keywords'],
+            'site'             => $site,
+            'home_url'         => $this->businessUrl($businessSlug, ''),
+            'people'           => $people,
+            'many_stores'      => count(array_filter($site['stores'] ?? [], static fn (array $s): bool => $s['type'] !== 'O')) > 1,
+        ]);
+    }
+
+    /**
      * My order history: the orders the customer placed with this business by their email address, once they opened
      * the link emailed to it (openOrderHistory()); the session v1/mart/order-history/open gave stays in this browser's
      * session, never in an address. Without one, or once it is over, the form asking for the link.
@@ -1922,6 +2015,86 @@ class Business extends BaseController
             static fn ($part): bool => $part !== null && trim((string) $part) !== '');
 
         return $parts === [] ? null : implode(', ', $parts);
+    }
+
+    /**
+     * An address as lines to show: line 1, line 2, then the city, the province (its name) and the postal code
+     * @param array  $address {address_line_1, address_line_2, city, subdivision_code, postal_code}, as v1/mart/site
+     *                        gives the business's contact and its stores
+     * @param string $countryCode the business's, for the province's name
+     * @return list<string> None for no address
+     */
+    private function addressLines(array $address, string $countryCode): array
+    {
+        $value       = static fn (string $key): string => trim((string) ($address[$key] ?? ''));
+        $subdivision = $value('subdivision_code');
+        if ($subdivision !== '') {
+            $subdivision = listSupportedSubdivisions($countryCode)[$subdivision] ?? $subdivision;
+        }
+
+        return array_values(array_filter([
+            $value('address_line_1'),
+            $value('address_line_2'),
+            implode(' ', array_filter([$value('city'), $subdivision, $value('postal_code')], 'strlen')),
+        ], 'strlen'));
+    }
+
+    /**
+     * A telephone number to show and to dial, or null for none
+     * @param string|null $number As saved, E.164 (+66812345678) for the most part
+     * @return array{label: string, tel: string}|null
+     */
+    private function phone(?string $number): ?array
+    {
+        $number = trim((string) $number);
+        if ($number === '') {
+            return null;
+        }
+        helper('html');
+
+        return ['label' => formatPhoneNumber($number), 'tel' => preg_replace('/[^\d+]/', '', $number)];
+    }
+
+    /**
+     * Where a store is on Google Maps: the link the business set, else a search for its name and address; null for a
+     * store with neither a link nor an address
+     * @param string|null  $link
+     * @param string       $name
+     * @param list<string> $addressLines
+     * @return string|null
+     */
+    private function mapsUrl(?string $link, string $name, array $addressLines): ?string
+    {
+        $link = trim((string) $link);
+        if (preg_match('#^https://#i', $link)) {
+            return $link;
+        }
+        if ($addressLines === []) {
+            return null;
+        }
+
+        return 'https://www.google.com/maps/search/?api=1&query=' . rawurlencode($name . ', ' . implode(', ', $addressLines));
+    }
+
+    /** The first letters of the first two words of a name ("Mai T." gives MT), for a person with no picture */
+    private function initials(string $name): string
+    {
+        $words = preg_split('/\s+/u', trim($name), -1, PREG_SPLIT_NO_EMPTY) ?: [];
+
+        return mb_strtoupper(implode('', array_map(static fn (string $word): string => mb_substr($word, 0, 1), array_slice($words, 0, 2))));
+    }
+
+    /**
+     * A language's name in the visitor's language: "Japanese" for ja when reading in English, "ญี่ปุ่น" in Thai
+     * @param string $code BCP 47, as the business saved it (ja, yue, nan-TW)
+     * @param string $locale
+     * @return string The code itself when it has no name
+     */
+    private static function languageName(string $code, string $locale): string
+    {
+        $name = class_exists(\Locale::class) ? \Locale::getDisplayName(str_replace('-', '_', $code), $locale) : '';
+
+        return $name === '' || $name === $code ? $code : mb_convert_case(mb_substr($name, 0, 1), MB_CASE_TITLE) . mb_substr($name, 1);
     }
 
     /**

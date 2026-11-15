@@ -176,91 +176,146 @@
     </div> */ ?>
 </header>
 <?= $this->renderSection('content') ?>
+<?php if (isset($business_slug, $site['business'])): ?>
+<?php
+// the business's footer: who it is, its order pages, how to reach it, and its languages
+helper('html'); // formatPhoneNumber()
+$footerBusiness = $site['business'];
+$footerName     = (string) ($footerBusiness['name'] ?? $business_name ?? lang('System.site-title'));
+$footerSlugUrl  = static fn (string $path = ''): string => base_url(rawurlencode($business_slug) . ($path === '' ? '' : '/' . $path));
+$contact        = is_array($footerBusiness['contact'] ?? null) ? $footerBusiness['contact'] : [];
+$contactValue   = static fn (string $key): string => trim((string) ($contact[$key] ?? ''));
+$subdivision    = $contactValue('subdivision_code');
+if ($subdivision !== '') {
+    $subdivision = listSupportedSubdivisions((string) ($footerBusiness['country_code'] ?? ''))[$subdivision] ?? $subdivision;
+}
+$addressLines = array_values(array_filter([
+    $contactValue('address_line_1'),
+    $contactValue('address_line_2'),
+    implode(' ', array_filter([$contactValue('city'), $subdivision, $contactValue('postal_code')], 'strlen')),
+], 'strlen'));
+$email   = $contactValue('email_address');
+$phone   = $contactValue('phone_number');
+$website = $contactValue('website');
+if ($website !== '' && ! preg_match('#^https?://#i', $website)) {
+    $website = 'https://' . $website;
+}
+$websiteLabel = preg_replace('#^https?://(www\.)?#i', '', rtrim($website, '/'));
+$hasContact   = $email !== '' || $phone !== '' || $website !== '' || $addressLines !== [];
+$about        = trim((string) ($footerBusiness['description'] ?? $site['meta']['description'] ?? ''));
+$languages    = is_array($site['languages'] ?? null) ? $site['languages'] : [];
+?>
 <footer id="footer" class="footer">
     <div class="footer-main">
         <div class="container">
             <div class="row gy-4">
-                <pre>
-                    <?php @print_r($site); ?>
-                </pre>
-                <div class="col-lg-3 col-md-6 col-sm-12">
+                <div class="col-lg-4 col-md-12">
                     <div class="footer-widget footer-about">
-                        <a href="<?= $homeUrl ?>" class="logo">
-                            <span class="sitename"><?= esc((isset($business_name) ? $business_name : lang('System.site-title'))) ?></span>
+                        <a href="<?= esc($homeUrl, 'attr') ?>" class="logo d-flex align-items-center gap-2">
+                            <?php if (isset($logo['url']) && $logo['shape'] === 'S'): ?>
+                                <img src="<?= esc($logo['url'], 'attr') ?>" alt="" class="footer-logo">
+                            <?php endif ?>
+                            <span class="sitename"><?= esc($footerName) ?></span>
                         </a>
-                    </div>
-                </div>
-                <div class="col-lg-2 col-md-6 col-sm-6">
-                    <div class="footer-widget">
-                        <?php if (isset($business_slug)): ?>
-                            <h4><?= lang('Business.your-orders') ?></h4>
-                            <ul class="footer-links">
-                                <li><a href="<?= esc(base_url(rawurlencode($business_slug) . '/check-order-status'), 'attr') ?>"><?= lang('Business.order-status.title') ?></a></li>
-                                <li><a href="<?= esc(base_url(rawurlencode($business_slug) . '/my-order-history'), 'attr') ?>"><?= lang('Business.order-history.title') ?></a></li>
-                            </ul>
-                        <?php else: ?>
-                            <h4>???</h4>
-                            something OtterNova
+                        <?php if ($about !== ''): ?>
+                            <p class="footer-about-text"><?= esc(mb_strimwidth($about, 0, 220, '…')) ?></p>
+                        <?php endif ?>
+                        <?php if (count($languages) > 1): ?>
+                            <div class="footer-languages" aria-label="<?= esc(lang('Business.footer.language'), 'attr') ?>">
+                                <i class="bi bi-translate"></i>
+                                <?php foreach ($languages as $langRow): ?>
+                                    <?php $isCurrent = ($langRow['code'] ?? '') === $locale; ?>
+                                    <a href="?hl=<?= esc(rawurlencode((string) ($langRow['code'] ?? '')), 'attr') ?>" hreflang="<?= esc($langRow['code'] ?? '', 'attr') ?>"<?= $isCurrent ? ' class="active" aria-current="true"' : '' ?>><?= esc($langRow['name'] ?? $langRow['code'] ?? '') ?></a>
+                                <?php endforeach ?>
+                            </div>
                         <?php endif ?>
                     </div>
                 </div>
-                <div class="col-lg-2 col-md-6 col-sm-6">
+                <div class="col-lg-2 col-md-4 col-6">
                     <div class="footer-widget">
-                        <?php if (isset($business_slug)): ?>
-                            <h4><?= lang('Business.links') ?></h4>
-                            <ul class="footer-links">
-                                <li><a href="<?= esc(base_url(rawurlencode($business_slug) . '/check-order-status'), 'attr') ?>"><?= lang('Business.order-status.title') ?></a></li>
-                            </ul>
-                        <?php endif; ?>
+                        <h4><?= lang('Business.footer.shop') ?></h4>
+                        <ul class="footer-links">
+                            <li><a href="<?= esc($homeUrl, 'attr') ?>"><?= lang('Business.footer.home') ?></a></li>
+                            <li><a href="<?= esc($footerSlugUrl('cart'), 'attr') ?>"><?= lang('Business.footer.cart') ?></a></li>
+                            <?php if (! empty($footerBusiness['shows_staff'])): ?>
+                                <li><a href="<?= esc($footerSlugUrl('staff'), 'attr') ?>"><?= lang('Business.staff-page.title') ?></a></li>
+                            <?php endif ?>
+                            <li><a href="<?= esc($footerSlugUrl('contact-us'), 'attr') ?>"><?= lang('Business.contact-page.title') ?></a></li>
+                        </ul>
                     </div>
                 </div>
-                <div class="col-lg-2 col-md-6 col-sm-6">
+                <div class="col-lg-2 col-md-4 col-6">
                     <div class="footer-widget">
-                        <?php if (isset($business_slug)): ?>
-                            <h4><?= lang('Business.about') ?></h4>
-                            <ul class="footer-links">
-                                <li><a href="?hl=<?= $langRow['code'] ?>"><?= $langRow['name'] ?></a></li>
-                            </ul>
-                        <?php endif; ?>
+                        <h4><?= lang('Business.footer.your-orders') ?></h4>
+                        <ul class="footer-links">
+                            <li><a href="<?= esc($footerSlugUrl('check-order-status'), 'attr') ?>"><?= lang('Business.order-status.title') ?></a></li>
+                            <li><a href="<?= esc($footerSlugUrl('my-order-history'), 'attr') ?>"><?= lang('Business.order-history.title') ?></a></li>
+                        </ul>
                     </div>
                 </div>
-                <div class="col-lg-3 col-md-6 col-sm-6">
-                    <div class="footer-widget">
+                <div class="col-lg-4 col-md-4">
+                    <div class="footer-widget footer-contact">
+                        <h4><a href="<?= esc($footerSlugUrl('contact-us'), 'attr') ?>"><?= lang('Business.footer.contact-us') ?></a></h4>
+                        <?php if (! $hasContact): ?>
+                            <p class="text-muted small mb-0"><?= lang('Business.footer.no-contact') ?></p>
+                        <?php endif ?>
+                        <?php if ($addressLines !== []): ?>
+                            <div class="contact-item">
+                                <i class="bi bi-geo-alt"></i>
+                                <address class="mb-0"><?= implode('<br>', array_map('esc', $addressLines)) ?></address>
+                            </div>
+                        <?php endif ?>
+                        <?php if ($phone !== ''): ?>
+                            <div class="contact-item">
+                                <i class="bi bi-telephone"></i>
+                                <a href="tel:<?= esc(preg_replace('/[^\d+]/', '', $phone), 'attr') ?>"><?= esc(formatPhoneNumber($phone)) ?></a>
+                            </div>
+                        <?php endif ?>
+                        <?php if ($email !== ''): ?>
+                            <div class="contact-item">
+                                <i class="bi bi-envelope"></i>
+                                <a href="mailto:<?= esc($email, 'attr') ?>"><?= esc($email) ?></a>
+                            </div>
+                        <?php endif ?>
+                        <?php if ($website !== ''): ?>
+                            <div class="contact-item">
+                                <i class="bi bi-globe2"></i>
+                                <a href="<?= esc($website, 'attr') ?>" target="_blank" rel="noopener"><?= esc($websiteLabel) ?></a>
+                            </div>
+                        <?php endif ?>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-
     <div class="footer-bottom">
         <div class="container">
-
-            <div class="payment-methods d-flex align-items-center justify-content-center">
-                <span>We Accept:</span>
-                <div class="payment-icons">
-                    <i class="bi bi-credit-card" aria-label="Credit Card"></i>
-                    <i class="bi bi-paypal" aria-label="PayPal"></i>
-                    <i class="bi bi-apple" aria-label="Apple Pay"></i>
-                    <i class="bi bi-google" aria-label="Google Pay"></i>
-                    <i class="bi bi-shop" aria-label="Shop Pay"></i>
-                    <i class="bi bi-cash" aria-label="Cash on Delivery"></i>
+            <div class="d-flex flex-column flex-md-row align-items-center justify-content-between gap-2">
+                <p class="copyright mb-0">© <?= date('Y') ?> <strong><?= esc($footerName) ?></strong>. <?= lang('Business.footer.rights') ?></p>
+                <div class="legal-links">
+                    <a href="<?= esc(base_url('terms-of-service'), 'attr') ?>"><?= lang('Business.footer.terms') ?></a>
+                    <a href="<?= esc(base_url('privacy-policy'), 'attr') ?>"><?= lang('Business.footer.privacy') ?></a>
+                    <a href="<?= esc(base_url(), 'attr') ?>" class="powered-by"><?= lang('Business.footer.powered-by', [lang('System.site-title')]) ?></a>
                 </div>
             </div>
-
-            <div class="legal-links">
-                <a href="tos.html">Terms of Service</a>
-                <a href="privacy.html">Privacy Policy</a>
-                <a href="tos.html">Cookies Settings</a>
-            </div>
-
-            <div class="copyright text-center">
-                <p>© <span>Copyright</span> <strong class="sitename">ShopWise</strong>. All Rights Reserved.</p>
-            </div>
-
         </div>
-
     </div>
 </footer>
+<?php else: ?>
+<footer id="footer" class="footer">
+    <div class="footer-bottom">
+        <div class="container">
+            <div class="d-flex flex-column flex-md-row align-items-center justify-content-between gap-2">
+                <p class="copyright mb-0">© <?= date('Y') ?> <strong><?= esc(lang('System.site-title')) ?></strong>. <?= lang('Business.footer.rights') ?></p>
+                <div class="legal-links">
+                    <a href="<?= esc(base_url('terms-of-service'), 'attr') ?>"><?= lang('Business.footer.terms') ?></a>
+                    <a href="<?= esc(base_url('privacy-policy'), 'attr') ?>"><?= lang('Business.footer.privacy') ?></a>
+                </div>
+            </div>
+        </div>
+    </div>
+</footer>
+<?php endif ?>
 <!-- Scroll Top -->
 <a href="#" id="scroll-top" class="scroll-top d-flex align-items-center justify-content-center"><i class="bi bi-arrow-up-short"></i></a>
 <!-- Ribbon -->
@@ -279,7 +334,6 @@
 <script src="<?= base_url('assets/vendor/glightbox/js/glightbox.min.js') ?>"></script>
 <script src="<?= base_url('assets/vendor/purecounter/purecounter_vanilla.js') ?>"></script>
 <script src="<?= getenv('LINK_API') ?>js/tracker.js" data-site="mart" data-business="<?= esc($business_slug ?? '', 'attr') ?>" defer></script>
-<!-- Main JS File -->
 <script src="<?= base_url('assets/js/main.js') ?>"></script>
 <?php if (isset($cart)): ?>
 <script>

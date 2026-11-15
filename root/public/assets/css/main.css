@@ -1897,6 +1897,97 @@ h6 {
   color: var(--accent-color);
 }
 
+/* OtterNova: the business footer */
+.footer {
+  border-top: 1px solid color-mix(in srgb, var(--default-color), transparent 90%);
+}
+
+.footer .footer-main .footer-widget .footer-logo {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  object-fit: cover;
+}
+
+.footer .footer-main .footer-about-text {
+  max-width: 360px;
+  color: color-mix(in srgb, var(--default-color), transparent 25%);
+  font-size: 15px;
+}
+
+.footer .footer-main .footer-languages {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.footer .footer-main .footer-languages i {
+  color: var(--accent-color);
+  margin-right: 4px;
+}
+
+.footer .footer-main .footer-languages a {
+  padding: 3px 12px;
+  border: 1px solid color-mix(in srgb, var(--default-color), transparent 80%);
+  border-radius: 999px;
+  font-size: 13px;
+  color: color-mix(in srgb, var(--default-color), transparent 20%);
+  transition: all 0.2s ease;
+}
+
+.footer .footer-main .footer-languages a:hover,
+.footer .footer-main .footer-languages a.active {
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+}
+
+.footer .footer-main .footer-languages a.active {
+  background-color: color-mix(in srgb, var(--accent-color), transparent 90%);
+  font-weight: 600;
+}
+
+.footer .footer-main .footer-contact .contact-item {
+  align-items: flex-start;
+}
+
+.footer .footer-main .footer-contact .contact-item i {
+  margin-top: 1px;
+}
+
+.footer .footer-main .footer-contact .contact-item a,
+.footer .footer-main .footer-contact .contact-item address {
+  color: color-mix(in srgb, var(--default-color), transparent 25%);
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.footer .footer-main .footer-contact .contact-item a:hover {
+  color: var(--accent-color);
+}
+
+.footer .footer-bottom .copyright {
+  padding-top: 0;
+  font-size: 14px;
+}
+
+.footer .footer-bottom .legal-links {
+  padding: 0;
+  gap: 8px 20px;
+}
+
+.footer .footer-bottom .legal-links .powered-by {
+  font-weight: 600;
+}
+
+.footer .footer-main .footer-widget h4 a {
+  color: inherit;
+}
+
+.footer .footer-main .footer-widget h4 a:hover {
+  color: var(--accent-color);
+}
+
 @media (max-width: 991.98px) {
   .footer .footer-newsletter {
     padding: 50px 0;
