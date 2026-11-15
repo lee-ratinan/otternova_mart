@@ -9,8 +9,8 @@
     <!-- Favicons -->
     <?php
     // the business's logo, when it has one; a wide one is too narrow for a favicon, so that keeps OtterNova's
-    $logoUrl    = isset($logo['url']) ? $logo['url'] : base_url('assets/img/logo.webp');
-    $faviconUrl = isset($logo['url']) && $logo['shape'] === 'S' ? $logo['url'] : base_url('assets/img/logo.webp');
+    $logoUrl    = isset($logo['url']) ? $logo['url'] : assets_url('img/logo.webp');
+    $faviconUrl = isset($logo['url']) && $logo['shape'] === 'S' ? $logo['url'] : assets_url('img/logo.webp');
     ?>
     <link href="<?= esc($faviconUrl, 'attr') ?>" rel="icon">
     <link href="<?= esc($faviconUrl, 'attr') ?>" rel="apple-touch-icon">
@@ -25,17 +25,17 @@
         <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+Thai:wght@100..900&family=Prompt:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap" rel="stylesheet">
     <?php endif; ?>
     <!-- Vendor CSS Files -->
-    <link href="<?= base_url('assets/vendor/bootstrap/css/bootstrap.min.css') ?>" rel="stylesheet">
-    <link href="<?= base_url('assets/vendor/bootstrap-icons/bootstrap-icons.css') ?>" rel="stylesheet">
-    <link href="<?= base_url('assets/vendor/swiper/swiper-bundle.min.css') ?>" rel="stylesheet">
-    <link href="<?= base_url('assets/vendor/drift-zoom/drift-basic.css') ?>" rel="stylesheet">
-    <link href="<?= base_url('assets/vendor/glightbox/css/glightbox.min.css') ?>" rel="stylesheet">
+    <link href="<?= assets_url('vendor/bootstrap5.3.8/css/bootstrap.min.css') ?>" rel="stylesheet">
+    <link href="<?= assets_url('vendor/bootstrap-icons1.13.1/bootstrap-icons.css') ?>" rel="stylesheet">
+    <link href="<?= assets_url('vendor/swiper11.2.10/swiper-bundle.min.css') ?>" rel="stylesheet">
+<!--    <link href="--><?php //= assets_url('vendor/drift-zoom/drift-basic.css') ?><!--" rel="stylesheet">-->
+    <link href="<?= assets_url('vendor/glightbox/css/glightbox.min.css') ?>" rel="stylesheet">
     <!-- Main CSS File -->
     <style>
         :root {<?php foreach ($css['fonts'] as $key => $values) : ?><?= $key . ': ' . $values ?>;<?php endforeach; ?>}
         :root {<?php foreach ($css['colors'] as $key => $values) : ?><?= $key . ': ' . $values ?>;<?php endforeach; ?>}
     </style>
-    <link href="<?= base_url('assets/css/main.css') ?>" rel="stylesheet">
+    <link href="<?= assets_url('themes/mart/css/main.css') ?>" rel="stylesheet">
     <!-- =======================================================
     * Template Name: ShopWise
     * Template URL: https://bootstrapmade.com/shopwise-bootstrap-ecommerce-template/
@@ -327,14 +327,13 @@ $languages    = is_array($site['languages'] ?? null) ? $site['languages'] : [];
     </div>
 <?php endif; ?>
 <!-- Vendor JS Files -->
-<script src="<?= base_url('assets/vendor/bootstrap/js/bootstrap.bundle.min.js') ?>"></script>
-<script src="<?= base_url('assets/vendor/php-email-form/validate.js') ?>"></script>
-<script src="<?= base_url('assets/vendor/swiper/swiper-bundle.min.js') ?>"></script>
-<script src="<?= base_url('assets/vendor/drift-zoom/Drift.min.js') ?>"></script>
-<script src="<?= base_url('assets/vendor/glightbox/js/glightbox.min.js') ?>"></script>
-<script src="<?= base_url('assets/vendor/purecounter/purecounter_vanilla.js') ?>"></script>
+<script src="<?= assets_url('vendor/bootstrap5.3.8/js/bootstrap.bundle.min.js') ?>"></script>
+<script src="<?= assets_url('vendor/swiper11.2.10/swiper-bundle.min.js') ?>"></script>
+<!--<script src="--><?php //= assets_url('vendor/drift-zoom/Drift.min.js') ?><!--"></script>-->
+<!--<script src="--><?php //= assets_url('vendor/glightbox/js/glightbox.min.js') ?><!--"></script>-->
+<!--<script src="--><?php //= assets_url('vendor/purecounter/purecounter_vanilla.js') ?><!--"></script>-->
 <script src="<?= getenv('LINK_API') ?>js/tracker.js" data-site="mart" data-business="<?= esc($business_slug ?? '', 'attr') ?>" defer></script>
-<script src="<?= base_url('assets/js/main.js') ?>"></script>
+<script src="<?= assets_url('themes/mart/js/main.js') ?>"></script>
 <?php if (isset($cart)): ?>
 <script>
     // the header's cart: redrawn from every cart answer (a page sends them as "cart:changed"), and its remove buttons
