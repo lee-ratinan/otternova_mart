@@ -19,6 +19,23 @@ use CodeIgniter\Config\BaseService;
  */
 class Services extends BaseService
 {
+    /**
+     * The framework's Language, with the business's words for its staff and participants (App\Libraries\Terms)
+     */
+    public static function language(?string $locale = null, bool $getShared = true)
+    {
+        if ($getShared) {
+            return static::getSharedInstance('language', $locale)->setLocale($locale);
+        }
+
+        $request = static::get('request');
+        $locale  = in_array($locale, [null, '', '0'], true)
+            ? ($request instanceof \CodeIgniter\HTTP\IncomingRequest ? $request->getLocale() : \Locale::getDefault())
+            : $locale;
+
+        return new \App\Libraries\Language($locale);
+    }
+
     /*
      * public static function example($getShared = true)
      * {

@@ -2,6 +2,7 @@
 
 namespace App\Controllers;
 
+use App\Libraries\Terms;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -1184,6 +1185,8 @@ class Business extends BaseController
         if ($code !== 200 || ! is_array($body['data'] ?? null)) {
             throw new RuntimeException(lang('Business.load-failed'));
         }
+        // what the business calls its staff and the people a booking is for, for every line of the page that names them
+        service('language')->useTerms(Terms::fromSite($body['data'], $locale));
 
         return $body['data'];
     }
