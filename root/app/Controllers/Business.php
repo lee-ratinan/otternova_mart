@@ -799,19 +799,192 @@ class Business extends BaseController
         return redirect()->to($this->businessUrl($businessSlug, 'my-order-history'));
     }
 
-    public function showBusinessPages(string $businessSlug, string $pagePublicId): string
+    /**
+     * A page the business designed itself, /{business}/pages/{page_slug}, from LINK_INTERNAL_API v1/mart/webpage: a 404
+     * unless it is published and within the business's plan, or ?preview={token} from the Client app names it
+     * @param string $businessSlug
+     * @param string $pageSlug
+     * @return string|ResponseInterface
+     */
+    public function showBusinessPages(string $businessSlug, string $pageSlug): string|ResponseInterface
     {
         $locale = $this->request->getLocale();
-        return 'Page for ' . $pagePublicId;
+        $site   = $this->site($businessSlug, $locale);
+        $page   = $this->webpage($businessSlug, $pageSlug, $locale);
+        if ($page === null) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+
+        return $this->customizedPage($site, $page, $businessSlug, $locale);
     }
 
-    public function ownHome(string $businessSlug): string
+    /**
+     * The business's own home page, /{business}, when it has one published within its plan (or ?preview={token}
+     * names it); otherwise, on the free plan or before it made one, the system home
+     * @param string $businessSlug
+     * @return string|ResponseInterface
+     */
+    public function ownHome(string $businessSlug): string|ResponseInterface
     {
-        $ownHome = null;
-        if (!is_null($ownHome)) {
-            return $this->showBusinessPages($businessSlug, $ownHome);
+        $locale = $this->request->getLocale();
+        $page   = $this->webpage($businessSlug, '', $locale);
+        if ($page === null) {
+            if ($this->previewToken() !== null) {
+                throw PageNotFoundException::forPageNotFound(lang('Business.preview-expired'));
+            }
+
+            return $this->systemHome($businessSlug);
         }
-        return $this->systemHome($businessSlug);
+
+        return $this->customizedPage($this->site($businessSlug, $locale), $page, $businessSlug, $locale);
+    }
+
+    /**
+     * A section design with sample texts and grey boxes for its pictures, in the business's colours and typefaces,
+     * /{business}/design-preview/{design_code}, for the Client app to show while the business picks one
+     * @param string $businessSlug
+     * @param string $designCode
+     * @return ResponseInterface
+     */
+    public function designPreview(string $businessSlug, string $designCode): ResponseInterface
+    {
+        $locale = $this->request->getLocale();
+        $site   = $this->site($businessSlug, $locale);
+        [$code, $body] = $this->fetchApi('v1/mart/design', ['business_slug' => $businessSlug, 'design_code' => $designCode, 'lang' => $locale]);
+        if ($code === 404 || $code === 400) {
+            throw PageNotFoundException::forPageNotFound();
+        }
+        if ($code !== 200 || ! is_array($body['data']['section'] ?? null)) {
+            throw new RuntimeException(lang('Business.load-failed'));
+        }
+        $section = $body['data']['section'];
+        $images  = [];
+        foreach ((array) ($body['data']['image_slots'] ?? []) as $slot => $size) {
+            $box            = $this->placeholder((int) ($size['width'] ?? 0), (int) ($size['height'] ?? 0));
+            $images[$slot]  = array_fill(0, max(1, (int) ($size['min'] ?? 1)), $box);
+        }
+        $section = ['public_id' => 'preview', 'images' => $images] + $section;
+
+        return $this->previewHeaders(view('customizedPage', $this->layout($site, $businessSlug, $locale) + [
+            'page_title'       => $site['meta']['title'],
+            'business_name'    => $site['business']['name'],
+            'meta_description' => $site['meta']['description'],
+            'meta_keywords'    => $site['meta']['keywords'],
+            'site'             => $site,
+            'menu'             => [],
+            'sections'         => $this->drawable([$section]),
+            'preview'          => 'design',
+            'system_home_url'  => $this->businessUrl($businessSlug, 'home'),
+        ]));
+    }
+
+    /**
+     * v1/mart/webpage for a page of the business, with this request's preview token when it has one
+     * @param string $businessSlug
+     * @param string $pageSlug     '' for the home page
+     * @param string $locale
+     * @return array|null Null when there is no such page to show
+     */
+    private function webpage(string $businessSlug, string $pageSlug, string $locale): ?array
+    {
+        $query = ['business_slug' => $businessSlug, 'page_slug' => $pageSlug, 'lang' => $locale];
+        if ($this->previewToken() !== null) {
+            $query['preview'] = $this->previewToken();
+        }
+        [$code, $body] = $this->fetchApi('v1/mart/webpage', $query);
+        if ($code === 404 || $code === 400) {
+            return null;
+        }
+        if ($code !== 200 || ! is_array($body['data']['page'] ?? null)) {
+            throw new RuntimeException(lang('Business.load-failed'));
+        }
+
+        return $body['data'];
+    }
+
+    /** The request's ?preview= token, or null */
+    private function previewToken(): ?string
+    {
+        $token = $this->request->getGet('preview');
+
+        return is_string($token) && $token !== '' && strlen($token) <= 512 ? $token : null;
+    }
+
+    /**
+     * A page of v1/mart/webpage in _layout_customized.php: its sections, each the view sections/{design_code}
+     * @param array  $site
+     * @param array  $data v1/mart/webpage's data
+     * @param string $businessSlug
+     * @param string $locale
+     * @return string|ResponseInterface
+     */
+    private function customizedPage(array $site, array $data, string $businessSlug, string $locale): string|ResponseInterface
+    {
+        $page   = $data['page'];
+        $isHome = (bool) ($page['is_home'] ?? false);
+        $menu   = array_map(fn (array $item): array => [
+            'name'    => ($item['is_home'] ?? false) ? lang('Business.home') : (string) ($item['name'] ?? ''),
+            'url'     => $this->businessUrl($businessSlug, ($item['is_home'] ?? false) ? '' : 'pages/' . rawurlencode((string) $item['slug'])),
+            'current' => ($item['public_id'] ?? null) === $page['public_id'],
+        ], (array) ($data['menu'] ?? []));
+
+        $html = view('customizedPage', $this->layout($site, $businessSlug, $locale) + [
+            // the home page has the website's meta tags; another page its own, else the website's
+            'page_title'       => $isHome ? $site['meta']['title'] : (string) ($page['meta']['title'] ?? $page['name'] ?? $site['meta']['title']),
+            'business_name'    => $site['business']['name'],
+            'meta_description' => $isHome ? $site['meta']['description'] : ($page['meta']['description'] ?? $site['meta']['description']),
+            'meta_keywords'    => $site['meta']['keywords'],
+            'site'             => $site,
+            'menu'             => $menu,
+            'sections'         => $this->drawable((array) ($data['sections'] ?? [])),
+            'preview'          => ($page['preview'] ?? false) ? 'page' : null,
+            'system_home_url'  => $this->businessUrl($businessSlug, 'home'),
+        ]);
+
+        return ($page['preview'] ?? false) ? $this->previewHeaders($html) : $html;
+    }
+
+    /**
+     * The sections that have a view: a design_code is a view's name, so anything else is left out (and logged)
+     * rather than naming another file
+     * @param list<array> $sections
+     * @return list<array> each with view: sections/{design_code}
+     */
+    private function drawable(array $sections): array
+    {
+        $drawable = [];
+        foreach ($sections as $section) {
+            $code = (string) ($section['design_code'] ?? '');
+            if (preg_match('/^[a-z0-9_]{1,32}$/', $code) !== 1 || ! is_file(APPPATH . 'Views/sections/' . $code . '.php')) {
+                log_message('error', 'No view for the web page section design {code}', ['code' => $code]);
+                continue;
+            }
+            $drawable[] = $section + ['view' => 'sections/' . $code];
+        }
+
+        return $drawable;
+    }
+
+    /** A grey box of the size, with the size written on it, for a picture not chosen yet */
+    private function placeholder(int $width, int $height): string
+    {
+        $width  = max(1, $width);
+        $height = max(1, $height);
+        $svg    = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ' . $width . ' ' . $height . '">'
+            . '<rect width="' . $width . '" height="' . $height . '" fill="#ced4da"/>'
+            . '<text x="50%" y="50%" fill="#6c757d" font-family="sans-serif" font-size="' . max(12, intdiv(min($width, $height), 12)) . '" text-anchor="middle" dominant-baseline="middle">'
+            . $width . ' × ' . $height . '</text></svg>';
+
+        return 'data:image/svg+xml,' . rawurlencode($svg);
+    }
+
+    /** A preview: kept by no cache, never indexed, and its token not passed on to other sites */
+    private function previewHeaders(string $html): ResponseInterface
+    {
+        return $this->response->setBody($html)
+            ->setHeader('Cache-Control', 'no-store, private')
+            ->setHeader('Referrer-Policy', 'no-referrer')
+            ->setHeader('X-Robots-Tag', 'noindex, nofollow');
     }
 
     /** API */

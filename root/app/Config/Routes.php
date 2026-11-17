@@ -34,7 +34,10 @@ $routes->get('(:any)/my-order-history/open', 'Business::openOrderHistory/$1');
 $routes->post('(:any)/my-order-history/open', 'Business::confirmOrderHistory/$1');
 $routes->post('(:any)/my-order-history/sign-out', 'Business::signOutOrderHistory/$1');
 // other businesses' page
-$routes->get('(:any)/pages/(:any)', 'Business::showBusinessPages/$1/$2');
+// the pages a business designs itself (the home page is /{business} below), and a design shown with sample texts
+// for the Client app while the business picks one
+$routes->get('(:any)/pages/(:segment)', 'Business::showBusinessPages/$1/$2');
+$routes->get('(:any)/design-preview/(:segment)', 'Business::designPreview/$1/$2');
 $routes->get('(:any)/contact-us', 'Business::contactUs/$1'); // the business's contact details and its stores
 $routes->get('(:any)/staff', 'Business::staff/$1'); // the people it shows, when it shows any
 // business main page

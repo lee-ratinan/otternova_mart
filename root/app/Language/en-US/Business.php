@@ -9,6 +9,14 @@ return [
         'participant' => ['one' => 'participant', 'other' => 'participants'],
     ],
     'load-failed'   => 'This page could not be loaded. Please try again shortly.',
+    // the pages a business designs itself (_layout_customized.php)
+    'home'            => 'Home',
+    'preview-expired' => 'This preview link has expired. Please open the preview again from your dashboard.',
+    'customized'      => [
+        'shop'           => 'Shop',
+        'preview-page'   => 'Preview: this is how the page looks as saved. Visitors only see it once it is published.',
+        'preview-design' => 'Preview of a design, with sample text. Your own text and pictures go in its place.',
+    ],
     'browse'        => 'Browse Items',
     'best-sellers'  => 'Best Sellers',
     'trending'      => 'Trending Now',
