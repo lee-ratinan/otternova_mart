@@ -13,6 +13,7 @@ return [
         'shop'           => 'ショップ',
         'preview-page'   => 'プレビュー：保存された状態のページです。公開されるまで訪問者には表示されません。',
         'preview-design' => 'サンプルテキストを使ったデザインのプレビューです。実際にはご自身のテキストと画像が入ります。',
+        'filter-all'     => 'すべて', // the portfolio's filter showing every card
     ],
     'browse'        => '商品を見る',
     'best-sellers'  => 'ベストセラー',

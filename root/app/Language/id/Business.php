@@ -13,6 +13,7 @@ return [
         'shop'           => 'Toko',
         'preview-page'   => 'Pratinjau: beginilah tampilan halaman sesuai yang disimpan. Pengunjung baru dapat melihatnya setelah diterbitkan.',
         'preview-design' => 'Pratinjau desain dengan teks contoh. Teks dan gambar Anda sendiri akan menggantikannya.',
+        'filter-all'     => 'Semua', // the portfolio's filter showing every card
     ],
     'browse'        => 'Jelajahi Item',
     'best-sellers'  => 'Terlaris',

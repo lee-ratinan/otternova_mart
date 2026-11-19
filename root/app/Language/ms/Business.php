@@ -13,6 +13,7 @@ return [
         'shop'           => 'Kedai',
         'preview-page'   => 'Pratonton: beginilah rupa halaman seperti yang disimpan. Pelawat hanya dapat melihatnya selepas ia diterbitkan.',
         'preview-design' => 'Pratonton reka bentuk dengan teks contoh. Teks dan gambar anda sendiri akan menggantikannya.',
+        'filter-all'     => 'Semua', // the portfolio's filter showing every card
     ],
     'browse'        => 'Layari Item',
     'best-sellers'  => 'Paling Laris',

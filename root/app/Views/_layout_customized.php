@@ -51,6 +51,14 @@ $faviconUrl = isset($logo['url']) && $logo['shape'] === 'S' ? $logo['url'] : ass
     <style>
         :root {<?php foreach ($css['fonts'] as $key => $value): ?><?= $key . ': ' . $value ?>;<?php endforeach ?>}
         :root {<?php foreach ($css['colors'] as $key => $value): ?><?= $key . ': ' . $value ?>;<?php endforeach ?>}
+        /* main.css's .light-background is a fixed dark navy; a tint of the business's own colours instead, so the
+           sections that alternate with it (about_01, testimonials_01, why_us_01) stay readable */
+        .light-background {--surface-color: inherit; --background-color: color-mix(in srgb, var(--accent-color) 5%, var(--surface-color));}
+        /* likewise main.css's header is fixed dark navy and its menu fixed light grey: the business's colours instead,
+           so its name (--heading-color) and the menu stay readable whichever colours it picked */
+        .header {--background-color: inherit; --surface-color: inherit;}
+        :root {--nav-color: var(--default-color); --nav-hover-color: var(--accent-color); --nav-mobile-background-color: var(--surface-color);
+            --nav-dropdown-background-color: var(--surface-color); --nav-dropdown-color: var(--default-color); --nav-dropdown-hover-color: var(--accent-color);}
     </style>
 
     <!-- =======================================================
@@ -70,9 +78,8 @@ $faviconUrl = isset($logo['url']) && $logo['shape'] === 'S' ? $logo['url'] : ass
         <a href="<?= esc($menu[0]['url'] ?? $system_home_url, 'attr') ?>" class="logo d-flex align-items-center">
             <?php if (isset($logo['url'])): ?>
                 <img src="<?= esc($logo['url'], 'attr') ?>" alt="<?= esc($business_name, 'attr') ?>">
-            <?php else: ?>
-                <h1 class="sitename"><?= esc($business_name) ?></h1>
             <?php endif ?>
+            <h1 class="sitename"><?= esc($business_name) ?></h1>
         </a>
         <nav id="navmenu" class="navmenu">
             <ul>

@@ -16,6 +16,7 @@ return [
         'shop'           => 'Shop',
         'preview-page'   => 'Preview: this is how the page looks as saved. Visitors only see it once it is published.',
         'preview-design' => 'Preview of a design, with sample text. Your own text and pictures go in its place.',
+        'filter-all'     => 'All', // the portfolio's filter showing every card
     ],
     'browse'        => 'Browse Items',
     'best-sellers'  => 'Best Sellers',

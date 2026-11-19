@@ -13,6 +13,7 @@ return [
         'shop'           => '商店',
         'preview-page'   => '预览：这是页面保存后的样子。发布后访客才能看到。',
         'preview-design' => '使用示例文字的设计预览。实际会换成您自己的文字和图片。',
+        'filter-all'     => '全部', // the portfolio's filter showing every card
     ],
     'browse'        => '浏览商品',
     'best-sellers'  => '畅销商品',
