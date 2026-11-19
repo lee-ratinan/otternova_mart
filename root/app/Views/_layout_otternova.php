@@ -28,8 +28,9 @@
     <link href="<?= assets_url('vendor/bootstrap5.3.8/css/bootstrap.min.css') ?>" rel="stylesheet">
     <link href="<?= assets_url('vendor/bootstrap-icons1.13.1/bootstrap-icons.css') ?>" rel="stylesheet">
     <link href="<?= assets_url('vendor/swiper11.2.10/swiper-bundle.min.css') ?>" rel="stylesheet">
-<!--    <link href="--><?php //= assets_url('vendor/drift-zoom/drift-basic.css') ?><!--" rel="stylesheet">-->
+    <link href="<?= assets_url('vendor/drift-zoom/drift-basic.css') ?>" rel="stylesheet">
     <link href="<?= assets_url('vendor/glightbox/css/glightbox.min.css') ?>" rel="stylesheet">
+    <link href="<?= assets_url('vendor/aos/aos.css') ?>" rel="stylesheet">
     <!-- Main CSS File -->
     <style>
         :root {<?php foreach ($css['fonts'] as $key => $values) : ?><?= $key . ': ' . $values ?>;<?php endforeach; ?>}
@@ -329,9 +330,10 @@ $languages    = is_array($site['languages'] ?? null) ? $site['languages'] : [];
 <!-- Vendor JS Files -->
 <script src="<?= assets_url('vendor/bootstrap5.3.8/js/bootstrap.bundle.min.js') ?>"></script>
 <script src="<?= assets_url('vendor/swiper11.2.10/swiper-bundle.min.js') ?>"></script>
-<!--<script src="--><?php //= assets_url('vendor/drift-zoom/Drift.min.js') ?><!--"></script>-->
-<!--<script src="--><?php //= assets_url('vendor/glightbox/js/glightbox.min.js') ?><!--"></script>-->
-<!--<script src="--><?php //= assets_url('vendor/purecounter/purecounter_vanilla.js') ?><!--"></script>-->
+<script src="<?= assets_url('vendor/drift-zoom/Drift.min.js') ?>"></script>
+<script src="<?= assets_url('vendor/glightbox/js/glightbox.min.js') ?>"></script>
+<script src="<?= assets_url('vendor/purecounter1.5.0/purecounter_vanilla.js') ?>"></script>
+<script src="<?= assets_url('vendor/aos/aos.js') ?>"></script>
 <script src="<?= getenv('LINK_API') ?>js/tracker.js" data-site="mart" data-business="<?= esc($business_slug ?? '', 'attr') ?>" defer></script>
 <script src="<?= assets_url('themes/mart/js/main.js') ?>"></script>
 <?php if (isset($cart)): ?>
@@ -421,5 +423,6 @@ $languages    = is_array($site['languages'] ?? null) ? $site['languages'] : [];
     })();
 </script>
 <?php endif ?>
+<script>AOS.init();</script>
 </body>
 </html>

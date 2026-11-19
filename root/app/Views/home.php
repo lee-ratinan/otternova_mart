@@ -59,27 +59,27 @@ $this->extend('_layout_otternova');
             <div class="container">
                 <div class="row align-items-center g-5">
                     <div class="col-lg-6">
-                        <span class="eyebrow"><?= lang('System.home.hero.eyebrow') ?></span>
-                        <h1><?= lang('System.home.hero.title') ?></h1>
-                        <p class="lead"><?= lang('System.home.hero.lead') ?></p>
-                        <div class="d-flex flex-wrap align-items-center gap-2">
+                        <span class="eyebrow" data-aos="fade-down" data-aos-duration="600"><?= lang('System.home.hero.eyebrow') ?></span>
+                        <h1 data-aos="fade-in" data-aos-duration="700"><?= lang('System.home.hero.title') ?></h1>
+                        <p data-aos="fade-in" data-aos-duration="700" class="lead"><?= lang('System.home.hero.lead') ?></p>
+                        <div class="d-flex flex-wrap align-items-center gap-2" data-aos="fade-up" data-aos-delay="200">
                             <a href="#orders" class="btn btn-main"><?= lang('System.home.hero.find-order') ?></a>
                             <a href="#owners" class="btn btn-plain"><?= lang('System.home.hero.for-owners') ?> <i class="bi bi-arrow-right"></i></a>
                         </div>
                     </div>
                     <div class="col-lg-6">
                         <div class="stack" aria-hidden="true">
-                            <div class="stack-card">
+                            <div class="stack-card" data-aos="fade-left" data-aos-delay="100">
                                 <div class="icon"><i class="bi bi-bag"></i></div>
                                 <div><strong><?= lang('System.home.stack.product') ?></strong><span><?= lang('System.home.stack.product-note') ?></span></div>
                                 <i class="bi bi-check-circle-fill tick"></i>
                             </div>
-                            <div class="stack-card">
+                            <div class="stack-card" data-aos="fade-left" data-aos-delay="250">
                                 <div class="icon"><i class="bi bi-calendar2-check"></i></div>
                                 <div><strong><?= lang('System.home.stack.booking') ?></strong><span><?= lang('System.home.stack.booking-note') ?></span></div>
                                 <i class="bi bi-check-circle-fill tick"></i>
                             </div>
-                            <div class="stack-card">
+                            <div class="stack-card" data-aos="zoom-in-left" data-aos-delay="400">
                                 <div class="icon"><i class="bi bi-receipt"></i></div>
                                 <div><strong><?= lang('System.home.stack.order') ?></strong><span><?= lang('System.home.stack.order-note') ?></span></div>
                             </div>
@@ -92,13 +92,13 @@ $this->extend('_layout_otternova');
         <!-- What a customer can do at a shop -->
         <section id="what" class="section">
             <div class="container">
-                <div class="section-head">
+                <div class="section-head" data-aos="fade-up">
                     <h2><?= lang('System.home.what.title') ?></h2>
                     <p><?= lang('System.home.what.lead') ?></p>
                 </div>
                 <div class="row g-4">
-                    <?php foreach ([['bi-bag', 'products'], ['bi-calendar2-check', 'appointments'], ['bi-people', 'sessions']] as [$icon, $key]): ?>
-                        <div class="col-md-4">
+                    <?php foreach ([['bi-bag', 'products', 'zoom-in'], ['bi-calendar2-check', 'appointments', 'flip-up'], ['bi-people', 'sessions', 'zoom-in-up']] as $i => [$icon, $key, $aos]): ?>
+                        <div class="col-md-4" data-aos="<?= $aos ?>" data-aos-delay="<?= $i * 150 ?>">
                             <div class="feature">
                                 <i class="bi <?= $icon ?>"></i>
                                 <h3><?= lang('System.home.what.' . $key . '.title') ?></h3>
@@ -115,12 +115,12 @@ $this->extend('_layout_otternova');
             <div class="container">
                 <div class="row g-5 align-items-start">
                     <div class="col-lg-7">
-                        <div class="section-head mb-4">
+                        <div class="section-head mb-4" data-aos="fade-right">
                             <h2><?= lang('System.home.orders.title') ?></h2>
                             <p><?= lang('System.home.orders.lead') ?></p>
                         </div>
                         <?php foreach (['email', 'status', 'history'] as $n => $key): ?>
-                            <div class="step">
+                            <div class="step" data-aos="fade-up" data-aos-delay="<?= $n * 120 ?>">
                                 <div class="num"><?= $n + 1 ?></div>
                                 <div>
                                     <h3><?= lang('System.home.orders.' . $key . '.title') ?></h3>
@@ -130,7 +130,7 @@ $this->extend('_layout_otternova');
                         <?php endforeach ?>
                     </div>
                     <div class="col-lg-5">
-                        <div class="order-note">
+                        <div class="order-note" data-aos="flip-left" data-aos-delay="200">
                             <i class="bi bi-life-preserver"></i>
                             <h3><?= lang('System.home.orders.help.title') ?></h3>
                             <p class="mb-0"><?= lang('System.home.orders.help.text') ?></p>
@@ -143,7 +143,7 @@ $this->extend('_layout_otternova');
         <!-- For business owners: the Otternova site is where they find out more -->
         <section id="owners" class="section">
             <div class="container">
-                <div class="owners d-lg-flex align-items-center justify-content-between gap-4">
+                <div class="owners d-lg-flex align-items-center justify-content-between gap-4" data-aos="zoom-in-up" data-aos-duration="800">
                     <div class="mb-4 mb-lg-0">
                         <h2><?= lang('System.home.owners.title') ?></h2>
                         <p><?= lang('System.home.owners.text') ?></p>
