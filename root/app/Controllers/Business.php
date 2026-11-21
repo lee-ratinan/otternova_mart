@@ -3,6 +3,7 @@
 namespace App\Controllers;
 
 use App\Libraries\Terms;
+use App\Exceptions\ShopClosedException;
 use CodeIgniter\Exceptions\PageNotFoundException;
 use CodeIgniter\HTTP\RedirectResponse;
 use CodeIgniter\HTTP\ResponseInterface;
@@ -479,7 +480,7 @@ class Business extends BaseController
 
             return redirect()->to($this->businessUrl($businessSlug, 'payment/' . rawurlencode($orderNumber)));
         }
-        $site   = $this->site($businessSlug, $locale);
+        $site   = $this->site($businessSlug, $locale, true);
         $key    = session()->get('orders')[$businessSlug][$orderNumber] ?? null;
         if (! is_string($key)) {
             throw PageNotFoundException::forPageNotFound();
@@ -544,7 +545,7 @@ class Business extends BaseController
     public function checkOrderStatus(string $businessSlug, ?string $orderNumber = null): string|RedirectResponse
     {
         $locale  = $this->request->getLocale();
-        $site    = $this->site($businessSlug, $locale);
+        $site    = $this->site($businessSlug, $locale, true);
         $page    = $this->layout($site, $businessSlug, $locale) + [
             'business_name'    => $site['business']['name'],
             'meta_description' => $site['meta']['description'],
@@ -682,7 +683,7 @@ class Business extends BaseController
     public function myOrderHistory(string $businessSlug): string|ResponseInterface
     {
         $locale  = $this->request->getLocale();
-        $site    = $this->site($businessSlug, $locale);
+        $site    = $this->site($businessSlug, $locale, true);
         $page    = $this->historyPage($site, $businessSlug, $locale);
         $session = session()->get('order_history')[$businessSlug] ?? null;
         if (is_string($session)) {
@@ -742,7 +743,7 @@ class Business extends BaseController
                 ->setHeader('Referrer-Policy', 'no-referrer')->setHeader('Cache-Control', 'no-store');
         }
         $locale = $this->request->getLocale();
-        $site   = $this->site($businessSlug, $locale);
+        $site   = $this->site($businessSlug, $locale, true);
         if (! is_string(session()->get('order_history_link')[$businessSlug] ?? null)) {
             return redirect()->to($this->businessUrl($businessSlug, 'my-order-history'));
         }
@@ -849,7 +850,7 @@ class Business extends BaseController
     public function designPreview(string $businessSlug, string $designCode): ResponseInterface
     {
         $locale = $this->request->getLocale();
-        $site   = $this->site($businessSlug, $locale);
+        $site   = $this->site($businessSlug, $locale, true);
         [$code, $body] = $this->fetchApi('v1/mart/design', ['business_slug' => $businessSlug, 'design_code' => $designCode, 'lang' => $locale]);
         if ($code === 404 || $code === 400) {
             throw PageNotFoundException::forPageNotFound();
@@ -1343,13 +1344,17 @@ class Business extends BaseController
     private const SUMMARY_LENGTH = 220;
 
     /**
-     * v1/mart/site for the business, which every page needs for its layout
+     * v1/mart/site for the business, which every page needs for its layout. While the business is closed on the mart
+     * (business.is_open false), a shop page gets the "not open yet" page instead; the pages of orders placed already
+     * (their payment, status and history) and the Client app's design preview pass $evenClosed, and still work.
      * @param string $businessSlug
      * @param string $locale
+     * @param bool   $evenClosed  the page is shown while the business is closed too
      * @return array
      * @throws PageNotFoundException When there is no such business
+     * @throws ShopClosedException   When it is closed and the page is not one of $evenClosed
      */
-    private function site(string $businessSlug, string $locale): array
+    private function site(string $businessSlug, string $locale, bool $evenClosed = false): array
     {
         [$code, $body] = $this->fetchApi('v1/mart/site', ['business_slug' => $businessSlug, 'lang' => $locale]);
         if ($code === 404 || $code === 400) {
@@ -1358,10 +1363,25 @@ class Business extends BaseController
         if ($code !== 200 || ! is_array($body['data'] ?? null)) {
             throw new RuntimeException(lang('Business.load-failed'));
         }
+        $site = $body['data'];
+        // an API from before the switch says nothing: taken as open, as every shop was then
+        if (! $evenClosed && ($site['business']['is_open'] ?? true) === false) {
+            [$css, $fontsUrl] = $this->theme((array) ($site['theme'] ?? []), $locale);
+            $page = view('shopClosed', [
+                'locale'           => $locale,
+                'slug'             => 'shop-closed',
+                'page_title'       => lang('Business.closed.title'),
+                'business_name'    => (string) ($site['business']['name'] ?? $businessSlug),
+                'css'              => $css,
+                'google_fonts_url' => $fontsUrl,
+                'logo'             => $this->logo($site['theme']['logo'] ?? null),
+            ]);
+            throw new ShopClosedException(service('response')->setStatusCode(404)->setBody($page));
+        }
         // what the business calls its staff and the people a booking is for, for every line of the page that names them
-        service('language')->useTerms(Terms::fromSite($body['data'], $locale));
+        service('language')->useTerms(Terms::fromSite($site, $locale));
 
-        return $body['data'];
+        return $site;
     }
 
     /**

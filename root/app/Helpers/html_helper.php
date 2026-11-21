@@ -189,3 +189,24 @@ if (!function_exists('assets_url')) {
         return rtrim(getenv('LINK_ASSETS'), '/') . '/' . ltrim($path, '/');
     }
 }
+if (!function_exists('socialLinksOf')) {
+    /**
+     * The business's social media accounts from v1/mart/site, as the footer and the contact page show them: only those
+     * with an http(s) address, and an icon name of letters, digits and hyphens (platform is its Bootstrap Icons name)
+     * @param array $site v1/mart/site
+     * @return list<array{platform: string, name: string, url: string}>
+     */
+    function socialLinksOf(array $site): array
+    {
+        $links = [];
+        foreach (is_array($site['business']['social_links'] ?? null) ? $site['business']['social_links'] : [] as $link) {
+            $platform = (string) ($link['platform'] ?? '');
+            $url      = (string) ($link['url'] ?? '');
+            if (preg_match('/^[a-z0-9-]+$/', $platform) === 1 && preg_match('#^https?://#i', $url) === 1) {
+                $links[] = ['platform' => $platform, 'name' => (string) ($link['name'] ?? $platform), 'url' => $url];
+            }
+        }
+
+        return $links;
+    }
+}

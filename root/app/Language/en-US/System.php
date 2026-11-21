@@ -7,6 +7,24 @@ return [
         'terms-of-service' => 'Terms of Service',
         'privacy-policy'   => 'Privacy Policy',
     ],
+    // the search for shops (Home::searchResults()) and the header's search box
+    'search'     => [
+        'submit'       => 'Search',
+        'label'        => 'Search for a shop',
+        'placeholder'  => 'Search shops by name or what they offer…',
+        'title-for'    => 'Results for “{0}”',
+        'prompt'       => 'Search for a shop',
+        'prompt-help'  => 'Type a shop’s name, or what you are looking for, such as “Thai massage”.',
+        'none'         => 'No shops found for “{0}”',
+        'none-help'    => 'Try fewer words, or another word for the same thing.',
+        'failed'       => 'The search is not working right now. Please try again in a moment.',
+        'count'        => '{0, plural, =1{# shop found} other{# shops found}}',
+        'reviews'      => '{0, plural, =1{(# review)} other{(# reviews)}}',
+        'adults-only'  => 'For adults only',
+        'pages'        => 'Pages of results',
+        'previous'     => 'Previous page',
+        'next'         => 'Next page',
+    ],
     // OtterNovaMart's own home page (Home::index())
     'home'       => [
         'meta-description' => 'OtterNovaMart is where independent shops on Otternova take orders and bookings.',

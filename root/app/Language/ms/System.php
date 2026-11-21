@@ -7,6 +7,24 @@ return [
         'terms-of-service' => 'Terma Perkhidmatan',
         'privacy-policy'   => 'Dasar Privasi',
     ],
+    // the search for shops (Home::searchResults()) and the header's search box
+    'search'     => [
+        'submit'       => 'Cari',
+        'label'        => 'Cari kedai',
+        'placeholder'  => 'Cari kedai mengikut nama atau apa yang ditawarkan…',
+        'title-for'    => 'Hasil untuk “{0}”',
+        'prompt'       => 'Cari kedai',
+        'prompt-help'  => 'Taip nama kedai, atau apa yang anda cari, seperti “urut Thai”.',
+        'none'         => 'Tiada kedai ditemui untuk “{0}”',
+        'none-help'    => 'Cuba dengan kurang perkataan, atau perkataan lain yang sama maksudnya.',
+        'failed'       => 'Carian tidak berfungsi sekarang. Sila cuba lagi sebentar lagi.',
+        'count'        => '{0} kedai ditemui',
+        'reviews'      => '({0} ulasan)',
+        'adults-only'  => 'Untuk dewasa sahaja',
+        'pages'        => 'Halaman hasil',
+        'previous'     => 'Halaman sebelumnya',
+        'next'         => 'Halaman seterusnya',
+    ],
     // OtterNovaMart's own home page (Home::index())
     'home'       => [
         'meta-description' => 'OtterNovaMart ialah tempat kedai-kedai bebas di Otternova menerima pesanan dan tempahan.',

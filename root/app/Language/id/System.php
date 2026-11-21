@@ -7,6 +7,24 @@ return [
         'terms-of-service' => 'Ketentuan Layanan',
         'privacy-policy'   => 'Kebijakan Privasi',
     ],
+    // the search for shops (Home::searchResults()) and the header's search box
+    'search'     => [
+        'submit'       => 'Cari',
+        'label'        => 'Cari toko',
+        'placeholder'  => 'Cari toko berdasarkan nama atau yang ditawarkan…',
+        'title-for'    => 'Hasil untuk “{0}”',
+        'prompt'       => 'Cari toko',
+        'prompt-help'  => 'Ketik nama toko, atau yang Anda cari, misalnya “pijat Thailand”.',
+        'none'         => 'Tidak ada toko untuk “{0}”',
+        'none-help'    => 'Coba dengan lebih sedikit kata, atau kata lain yang sama artinya.',
+        'failed'       => 'Pencarian sedang tidak berfungsi. Silakan coba lagi sebentar lagi.',
+        'count'        => '{0} toko ditemukan',
+        'reviews'      => '({0} ulasan)',
+        'adults-only'  => 'Khusus dewasa',
+        'pages'        => 'Halaman hasil',
+        'previous'     => 'Halaman sebelumnya',
+        'next'         => 'Halaman berikutnya',
+    ],
     // OtterNovaMart's own home page (Home::index())
     'home'       => [
         'meta-description' => 'OtterNovaMart adalah tempat toko-toko independen di Otternova menerima pesanan dan reservasi.',

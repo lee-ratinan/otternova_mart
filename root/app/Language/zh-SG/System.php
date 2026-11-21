@@ -7,6 +7,24 @@ return [
         'terms-of-service' => '服务条款',
         'privacy-policy'   => '隐私政策',
     ],
+    // the search for shops (Home::searchResults()) and the header's search box
+    'search'     => [
+        'submit'       => '搜索',
+        'label'        => '搜索商店',
+        'placeholder'  => '按名称或提供的服务搜索商店…',
+        'title-for'    => '“{0}”的搜索结果',
+        'prompt'       => '搜索商店',
+        'prompt-help'  => '输入商店名称，或您要找的东西，例如“泰式按摩”。',
+        'none'         => '找不到与“{0}”相符的商店',
+        'none-help'    => '请试试更少的词语，或意思相同的其他词语。',
+        'failed'       => '搜索目前无法使用。请稍后再试。',
+        'count'        => '找到 {0} 家商店',
+        'reviews'      => '（{0} 条评价）',
+        'adults-only'  => '仅限成人',
+        'pages'        => '搜索结果页',
+        'previous'     => '上一页',
+        'next'         => '下一页',
+    ],
     // OtterNovaMart's own home page (Home::index())
     'home'       => [
         'meta-description' => 'OtterNovaMart 是 Otternova 上的独立商店接受订单和预约的地方。',

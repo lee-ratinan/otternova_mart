@@ -355,6 +355,7 @@ return [
         'call'         => 'Telefon',
         'email'        => 'E-mel',
         'website'      => 'Laman web',
+        'follow'       => 'Ikuti kami',
         'no-stores'    => 'Kedai ini belum menyenaraikan sebarang lokasi.',
     ],
     'staff-page'         => [
@@ -372,9 +373,19 @@ return [
         'contact-us'   => 'Hubungi Kami',
         'language'     => 'Bahasa',
         'no-contact'   => 'Kedai ini belum menambah butiran hubungannya.',
+        'follow-us'    => 'Ikuti kami',
+        'social-link'  => '{0} (dibuka dalam tab baharu)',
         'rights'       => 'Hak cipta terpelihara.',
         'powered-by'   => 'Dikuasakan oleh {0}',
         'terms'        => 'Terma Perkhidmatan',
         'privacy'      => 'Dasar Privasi',
+    ],
+    // a shop not open on the mart yet (shopClosed, Business::site())
+    'closed'             => [
+        'title'   => 'Belum dibuka',
+        'heading' => '{0} belum dibuka',
+        'text'    => 'Kedai ini sedang bersedia dan belum menerima pesanan di OtterNovaMart. Sila kembali tidak lama lagi.',
+        'orders'  => 'Sudah membuat pesanan di sini? Pautan dalam e-mel pesanan anda masih menunjukkannya.',
+        'browse'  => 'Cari kedai lain',
     ],
 ];

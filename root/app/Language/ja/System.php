@@ -7,6 +7,24 @@ return [
         'terms-of-service' => '利用規約',
         'privacy-policy'   => 'プライバシーポリシー',
     ],
+    // the search for shops (Home::searchResults()) and the header's search box
+    'search'     => [
+        'submit'       => '検索',
+        'label'        => 'ショップを検索',
+        'placeholder'  => 'ショップ名や内容で検索…',
+        'title-for'    => '「{0}」の検索結果',
+        'prompt'       => 'ショップを検索',
+        'prompt-help'  => 'ショップ名や、探しているもの（例：「タイ古式マッサージ」）を入力してください。',
+        'none'         => '「{0}」に一致するショップはありません',
+        'none-help'    => '言葉を減らすか、同じ意味の別の言葉で試してください。',
+        'failed'       => '現在、検索を利用できません。しばらくしてからもう一度お試しください。',
+        'count'        => '{0}件のショップ',
+        'reviews'      => '（{0}件のレビュー）',
+        'adults-only'  => '成人向け',
+        'pages'        => '検索結果のページ',
+        'previous'     => '前のページ',
+        'next'         => '次のページ',
+    ],
     // OtterNovaMart's own home page (Home::index())
     'home'       => [
         'meta-description' => 'OtterNovaMart は、Otternova の個人店が注文や予約を受け付ける場所です。',

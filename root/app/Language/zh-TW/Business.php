@@ -355,6 +355,7 @@ return [
         'call'         => '電話',
         'email'        => '電子郵件',
         'website'      => '網站',
+        'follow'       => '追蹤我們',
         'no-stores'    => '此商店尚未列出任何據點。',
     ],
     'staff-page'         => [
@@ -372,9 +373,19 @@ return [
         'contact-us'   => '聯絡我們',
         'language'     => '語言',
         'no-contact'   => '此商店尚未新增聯絡資訊。',
+        'follow-us'    => '追蹤我們',
+        'social-link'  => '{0}（在新分頁中開啟）',
         'rights'       => '版權所有。',
         'powered-by'   => '由 {0} 提供技術支援',
         'terms'        => '服務條款',
         'privacy'      => '隱私權政策',
+    ],
+    // a shop not open on the mart yet (shopClosed, Business::site())
+    'closed'             => [
+        'title'   => '尚未開放',
+        'heading' => '{0}尚未開放',
+        'text'    => '此商店正在準備中，尚未在 OtterNovaMart 上接受訂單。請稍後再來。',
+        'orders'  => '已經在這裡下過單？訂單電子郵件中的連結仍可查看。',
+        'browse'  => '尋找其他商店',
     ],
 ];

@@ -358,6 +358,7 @@ return [
         'call'         => 'Call',
         'email'        => 'Email',
         'website'      => 'Website',
+        'follow'       => 'Follow us',
         'no-stores'    => 'This shop has not listed any locations yet.',
     ],
     'staff-page'         => [
@@ -375,9 +376,19 @@ return [
         'contact-us'   => 'Contact Us',
         'language'     => 'Language',
         'no-contact'   => 'The shop has not added its contact details yet.',
+        'follow-us'    => 'Follow us',
+        'social-link'  => '{0} (opens in a new tab)',
         'rights'       => 'All rights reserved.',
         'powered-by'   => 'Powered by {0}',
         'terms'        => 'Terms of Service',
         'privacy'      => 'Privacy Policy',
+    ],
+    // a shop not open on the mart yet (shopClosed, Business::site())
+    'closed'             => [
+        'title'   => 'Not open yet',
+        'heading' => '{0} is not open yet',
+        'text'    => 'This shop is getting ready and is not taking orders on OtterNovaMart yet. Please come back soon.',
+        'orders'  => 'Placed an order here already? The link in your order email still shows it.',
+        'browse'  => 'Find other shops',
     ],
 ];

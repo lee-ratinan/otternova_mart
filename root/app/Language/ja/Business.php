@@ -355,6 +355,7 @@ return [
         'call'         => '電話',
         'email'        => 'メール',
         'website'      => 'ウェブサイト',
+        'follow'       => 'フォローする',
         'no-stores'    => 'このショップはまだ店舗を登録していません。',
     ],
     'staff-page'         => [
@@ -372,9 +373,19 @@ return [
         'contact-us'   => 'お問い合わせ',
         'language'     => '言語',
         'no-contact'   => 'このショップはまだ連絡先を登録していません。',
+        'follow-us'    => 'フォローする',
+        'social-link'  => '{0}（新しいタブで開きます）',
         'rights'       => 'All rights reserved.',
         'powered-by'   => 'Powered by {0}',
         'terms'        => '利用規約',
         'privacy'      => 'プライバシーポリシー',
+    ],
+    // a shop not open on the mart yet (shopClosed, Business::site())
+    'closed'             => [
+        'title'   => 'まだ公開されていません',
+        'heading' => '{0}はまだ公開されていません',
+        'text'    => 'このショップは準備中で、OtterNovaMartではまだ注文を受け付けていません。またお越しください。',
+        'orders'  => 'すでにご注文済みですか？注文メールのリンクから引き続き確認できます。',
+        'browse'  => 'ほかのショップを探す',
     ],
 ];

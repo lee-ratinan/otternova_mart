@@ -57,6 +57,9 @@
     if (isset($site['business'])) {
         $homeUrl = base_url(rawurlencode($site['business']['slug']));
     }
+    // the search for businesses (Home::searchResults()): on the mart's own home page and its results, not a shop's pages
+    $showSearch  = ! isset($business_slug) && in_array($slug ?? '', ['home', 'search'], true);
+    $searchQuery = (string) ($search_query ?? '');
     ?>
 </head>
 <body class="index-page lang-<?= $locale ?>">
@@ -74,19 +77,25 @@
                 </div>
                 <!-- Search -->
                 <div class="col d-none d-lg-block">
-                    <form class="search-bar d-none">
-                        <i class="bi bi-search search-icon"></i>
-                        <input type="text" class="search-field" placeholder="Search for products, brands, and more...">
-                        <button class="search-submit" type="submit">Search</button>
+                    <?php if ($showSearch): ?>
+                    <form class="search-bar" action="<?= esc(base_url('search'), 'attr') ?>" method="get" role="search">
+                        <i class="bi bi-search search-icon" aria-hidden="true"></i>
+                        <input type="search" class="search-field" name="q" value="<?= esc($searchQuery, 'attr') ?>" maxlength="100" required
+                               placeholder="<?= esc(lang('System.search.placeholder'), 'attr') ?>" aria-label="<?= esc(lang('System.search.label'), 'attr') ?>">
+                        <button class="search-submit" type="submit"><?= lang('System.search.submit') ?></button>
                     </form>
+                    <?php endif ?>
                 </div>
                 <!-- Actions -->
                 <div class="col-auto ms-auto ms-lg-0">
                     <div class="action-group d-flex align-items-center">
-                        <?php /*!-- Mobile Search Toggle -->
-                        <button class="action-btn mobile-search-toggle d-lg-none" type="button" data-bs-toggle="collapse" data-bs-target="#mobileSearch" aria-expanded="false" aria-controls="mobileSearch">
+                        <?php if ($showSearch): ?>
+                        <!-- Mobile Search Toggle -->
+                        <button class="action-btn mobile-search-toggle d-lg-none" type="button" data-bs-toggle="collapse" data-bs-target="#mobileSearch" aria-expanded="false" aria-controls="mobileSearch"
+                                aria-label="<?= esc(lang('System.search.label'), 'attr') ?>">
                             <i class="bi bi-search"></i>
-                        </button> */ ?>
+                        </button>
+                        <?php endif ?>
                         <?php if (isset($cart)): ?>
                         <!-- Cart -->
                         <div class="dropdown" id="header-cart">
@@ -164,17 +173,20 @@
             </div>
         </div>
     </div>
-    <?php /* !-- Mobile Search Form -->
+    <?php if ($showSearch): ?>
+    <!-- Mobile Search Form -->
     <div class="collapse" id="mobileSearch">
         <div class="container-fluid container-xl">
-            <form class="mobile-search">
+            <form class="mobile-search" action="<?= esc(base_url('search'), 'attr') ?>" method="get" role="search">
                 <div class="mobile-search-inner">
-                    <i class="bi bi-search"></i>
-                    <input type="text" class="form-control" placeholder="What are you looking for?">
+                    <i class="bi bi-search" aria-hidden="true"></i>
+                    <input type="search" class="form-control" name="q" value="<?= esc($searchQuery, 'attr') ?>" maxlength="100" required
+                           placeholder="<?= esc(lang('System.search.placeholder'), 'attr') ?>" aria-label="<?= esc(lang('System.search.label'), 'attr') ?>">
                 </div>
             </form>
         </div>
-    </div> */ ?>
+    </div>
+    <?php endif ?>
 </header>
 <?= $this->renderSection('content') ?>
 <?php if (isset($business_slug, $site['business'])): ?>
@@ -205,6 +217,7 @@ $websiteLabel = preg_replace('#^https?://(www\.)?#i', '', rtrim($website, '/'));
 $hasContact   = $email !== '' || $phone !== '' || $website !== '' || $addressLines !== [];
 $about        = trim((string) ($footerBusiness['description'] ?? $site['meta']['description'] ?? ''));
 $languages    = is_array($site['languages'] ?? null) ? $site['languages'] : [];
+$socialLinks  = socialLinksOf($site);
 ?>
 <footer id="footer" class="footer">
     <div class="footer-main">
@@ -220,6 +233,14 @@ $languages    = is_array($site['languages'] ?? null) ? $site['languages'] : [];
                         </a>
                         <?php if ($about !== ''): ?>
                             <p class="footer-about-text"><?= esc(mb_strimwidth($about, 0, 220, '…')) ?></p>
+                        <?php endif ?>
+                        <?php if ($socialLinks !== []): ?>
+                            <nav class="social-icons mb-3" aria-label="<?= esc(lang('Business.footer.follow-us'), 'attr') ?>">
+                                <?php foreach ($socialLinks as $socialLink): ?>
+                                    <a href="<?= esc($socialLink['url'], 'attr') ?>" target="_blank" rel="noopener" title="<?= esc($socialLink['name'], 'attr') ?>"
+                                       aria-label="<?= esc(lang('Business.footer.social-link', [$socialLink['name']]), 'attr') ?>"><i class="bi bi-<?= esc($socialLink['platform'], 'attr') ?>" aria-hidden="true"></i></a>
+                                <?php endforeach ?>
+                            </nav>
                         <?php endif ?>
                         <?php if (count($languages) > 1): ?>
                             <div class="footer-languages" aria-label="<?= esc(lang('Business.footer.language'), 'attr') ?>">

@@ -12,6 +12,7 @@ $this->extend('_layout_otternova');
 
 $business = $site['business'];
 $reach    = $business_contact;
+$social   = socialLinksOf($site);
 ?>
 <?= $this->section('content') ?>
     <style>
@@ -23,6 +24,10 @@ $reach    = $business_contact;
         .contact-us .reach-item .label { display: block; font-size: 12px; text-transform: uppercase; letter-spacing: .06em; color: color-mix(in srgb, var(--default-color), transparent 45%); }
         .contact-us .reach-item a, .contact-us .reach-item address { color: var(--default-color); word-break: break-word; margin: 0; }
         .contact-us .reach-item a:hover { color: var(--accent-color); }
+        .contact-us .social-list { list-style: none; padding: 0; margin: 4px 0 0; display: flex; flex-wrap: wrap; gap: 8px; }
+        .contact-us .social-list a { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 999px; font-size: 14px;
+            border: 1px solid color-mix(in srgb, var(--default-color), transparent 85%); }
+        .contact-us .social-list a:hover { background: var(--accent-color); border-color: var(--accent-color); color: var(--contrast-color); }
         .contact-us .store-card { background: var(--surface-color); border: 1px solid color-mix(in srgb, var(--default-color), transparent 90%); border-radius: 14px; padding: 22px;
             height: 100%; display: flex; flex-direction: column; transition: box-shadow .2s ease, transform .2s ease; }
         .contact-us .store-card:hover { box-shadow: 0 10px 28px color-mix(in srgb, var(--default-color), transparent 90%); transform: translateY(-2px); }
@@ -82,6 +87,19 @@ $reach    = $business_contact;
                                 <span class="icon"><i class="bi bi-building"></i></span>
                                 <div><span class="label"><?= lang('Business.contact-page.address') ?></span>
                                     <address><?= implode('<br>', array_map('esc', $reach['address'])) ?></address></div>
+                            </div>
+                        <?php endif ?>
+                        <?php if ($social !== []): ?>
+                            <div class="reach-item">
+                                <span class="icon"><i class="bi bi-share"></i></span>
+                                <div class="flex-grow-1"><span class="label"><?= lang('Business.contact-page.follow') ?></span>
+                                    <ul class="social-list">
+                                        <?php foreach ($social as $link): ?>
+                                            <li><a href="<?= esc($link['url'], 'attr') ?>" target="_blank" rel="noopener"
+                                                   aria-label="<?= esc(lang('Business.footer.social-link', [$link['name']]), 'attr') ?>">
+                                                    <i class="bi bi-<?= esc($link['platform'], 'attr') ?>" aria-hidden="true"></i><?= esc($link['name']) ?></a></li>
+                                        <?php endforeach ?>
+                                    </ul></div>
                             </div>
                         <?php endif ?>
                     </div>
