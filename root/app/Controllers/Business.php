@@ -625,7 +625,68 @@ class Business extends BaseController
                 'website' => $website === '' ? null : ['url' => $website, 'label' => preg_replace('#^https?://(www\.)?#i', '', rtrim($website, '/'))],
             ],
             'stores'           => $stores,
+            'contact_form'     => $this->contactForm($businessSlug),
         ]);
+    }
+
+    /**
+     * The contact form of the contact page: a form token from v1/mart/message-token (null when there is none to be
+     * had: the page says the form cannot be used now), and what sendMessage() left for the page after a send
+     * @param string $businessSlug
+     * @return array{token: string|null, action: string, sent: string|null, error: string|null, errors: array<string, string>, old: array<string, string>}
+     */
+    private function contactForm(string $businessSlug): array
+    {
+        [$code, $body] = $this->fetchApi('v1/mart/message-token', ['business_slug' => $businessSlug]);
+        $token         = $body['data']['form_token'] ?? null;
+        $errors        = session()->getFlashdata('contact_errors');
+        $old           = session()->getFlashdata('contact_old');
+
+        return [
+            'token'  => $code === 200 && is_string($token) ? $token : null,
+            'action' => $this->businessUrl($businessSlug, 'contact-us/send'),
+            'sent'   => session()->getFlashdata('contact_sent'),
+            'error'  => session()->getFlashdata('contact_error'),
+            'errors' => is_array($errors) ? array_filter($errors, 'is_string') : [],
+            'old'    => is_array($old) ? $old : [],
+        ];
+    }
+
+    /**
+     * POST from the contact form: name, email, phone, message, form_token, and website (the honeypot, hidden from
+     * people). v1/mart/message takes it to the business (its Messages page in the Client app); the API checks the
+     * fields and keeps bots and floods out, and its messages, in the customer's language, are shown back on the page.
+     * The fields come back filled in after an error, but never the token or the honeypot.
+     * @param string $businessSlug
+     * @return RedirectResponse To the form on the contact page
+     */
+    public function sendMessage(string $businessSlug): RedirectResponse
+    {
+        $field  = fn (string $name, int $max): string => mb_substr($this->postText($name), 0, $max);
+        $fields = [
+            'name'    => $field('name', 200),
+            'email'   => $field('email', 200),
+            'phone'   => $field('phone', 64),
+            'message' => mb_substr(is_string($this->request->getPost('message')) ? $this->request->getPost('message') : '', 0, 6000),
+        ];
+        [$code, $body] = $this->postApi('v1/mart/message', $fields + [
+            'business_slug' => $businessSlug,
+            'locale'        => $this->request->getLocale(),
+            'form_token'    => $this->postText('form_token'),
+            'website'       => $this->postText('website'),
+        ]);
+        $back    = redirect()->to($this->businessUrl($businessSlug, 'contact-us') . '#contact-form');
+        $message = is_string($body['message'] ?? null) && $body['message'] !== '' ? $body['message'] : null;
+        if ($code === 201) {
+            return $back->with('contact_sent', $message ?? lang('Business.contact-page.form-sent'));
+        }
+        $back->with('contact_old', $fields);
+        if ($code === 422 && is_array($body['errors'] ?? null)) {
+            return $back->with('contact_errors', $body['errors'])->with('contact_error', $message ?? lang('Business.contact-page.form-check'));
+        }
+
+        // 400 (the form expired), 409 (the shop closed meanwhile), 429 (too many messages): the API says which
+        return $back->with('contact_error', in_array($code, [400, 409, 429], true) && $message !== null ? $message : lang('Business.contact-page.form-failed'));
     }
 
     /**

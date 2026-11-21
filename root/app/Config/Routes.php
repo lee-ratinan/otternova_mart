@@ -54,4 +54,5 @@ $routes->post('(:any)/checkout-init', 'Business::checkoutInit/$1');
 $routes->post('(:any)/checkout-confirm', 'Business::checkoutConfirm/$1');
 $routes->post('(:any)/checkout-quote', 'Business::checkoutQuote/$1');
 $routes->post('(:any)/retrieve-order-status', 'Business::retrieveOrderStatus/$1');
+$routes->post('(:any)/contact-us/send', 'Business::sendMessage/$1'); // the contact form, to v1/mart/message
 $routes->post('(:any)/retrieve-order-history', 'Business::retrieveOrderHistory/$1');

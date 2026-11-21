@@ -88,6 +88,9 @@ abstract class BaseController extends Controller
                 'headers'     => [
                     'Accept'          => 'application/json',
                     'Accept-Language' => $this->request->getLocale(),
+                    // the customer's address, which the API's counts per address (contact form, order lookups) go by;
+                    // it trusts this only from the addresses in its PROXY_IPS, this server's among them
+                    'X-Forwarded-For' => $this->request->getIPAddress(),
                 ],
                 'timeout'     => 15,
                 'http_errors' => false,

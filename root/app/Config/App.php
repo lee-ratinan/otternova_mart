@@ -190,6 +190,19 @@ class App extends BaseConfig
      */
     public array $proxyIPs = [];
 
+    public function __construct()
+    {
+        parent::__construct();
+
+        // PROXY_IPS in .env: comma-separated addresses or subnets (a load balancer in front of this server) trusted to
+        // pass on the visitor's address in X-Forwarded-For; this server passes it on to the API in turn
+        foreach (explode(',', (string) env('PROXY_IPS', '')) as $proxy) {
+            if (trim($proxy) !== '') {
+                $this->proxyIPs[trim($proxy)] = 'X-Forwarded-For';
+            }
+        }
+    }
+
     /**
      * --------------------------------------------------------------------------
      * Content Security Policy
