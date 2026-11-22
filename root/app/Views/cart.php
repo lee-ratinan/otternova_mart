@@ -35,12 +35,7 @@ $json     = static fn ($value): string => json_encode($value, JSON_HEX_TAG | JSO
     <div class="page-title light-background">
         <div class="container d-lg-flex justify-content-between align-items-center">
             <h1 class="mb-2 mb-lg-0"><?= lang('Business.cart.title') ?></h1>
-            <nav class="breadcrumbs">
-                <ol>
-                    <li><a href="<?= esc($urls['home'], 'attr') ?>"><?= esc($business['name']) ?></a></li>
-                    <li class="current"><?= lang('Business.cart.title') ?></li>
-                </ol>
-            </nav>
+            <?= view('section_parts/breadcrumbs', ['breadcrumbs' => $breadcrumbs]) ?>
         </div>
     </div>
     <section id="cart" class="cart section">

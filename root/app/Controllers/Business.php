@@ -83,6 +83,7 @@ class Business extends BaseController
             'meta_keywords'    => $site['meta']['keywords'],
             'site'             => $site,
             'artifact'         => $artifact,
+            'breadcrumbs'      => $this->breadcrumbs($businessSlug, $locale, [['name' => $artifact['name']]]),
             'summary'          => mb_strlen($plain) > self::SUMMARY_LENGTH ? mb_strimwidth($plain, 0, self::SUMMARY_LENGTH, '…') : $plain,
             'summary_cut'      => mb_strlen($plain) > self::SUMMARY_LENGTH,
             'images'           => $data['images'],
@@ -130,6 +131,7 @@ class Business extends BaseController
             'meta_keywords'    => $site['meta']['keywords'],
             'site'             => $site,
             'artifact'         => $artifact,
+            'breadcrumbs'      => $this->breadcrumbs($businessSlug, $locale, [['name' => $artifact['name']]]),
             'summary'          => mb_strlen($plain) > self::SUMMARY_LENGTH ? mb_strimwidth($plain, 0, self::SUMMARY_LENGTH, '…') : $plain,
             'summary_cut'      => mb_strlen($plain) > self::SUMMARY_LENGTH,
             'images'           => $data['images'],
@@ -229,14 +231,19 @@ class Business extends BaseController
             ];
         }
 
+        $serviceUrl = base_url(rawurlencode($businessSlug) . '/service/' . rawurlencode($service['public_id']));
+
         return view('serviceSessions', $this->layout($site, $businessSlug, $locale) + [
+            'breadcrumbs'      => $this->breadcrumbs($businessSlug, $locale, [
+                ['name' => $service['name'], 'url' => $serviceUrl], ['name' => lang('Business.sessions.breadcrumb')],
+            ]),
             'page_title'       => lang('Business.slots.title', [$service['name']]),
             'business_name'    => $site['business']['name'],
             'meta_description' => $site['meta']['description'],
             'meta_keywords'    => $site['meta']['keywords'],
             'site'             => $site,
             'service'          => $service + [
-                'url'     => base_url(rawurlencode($businessSlug) . '/service/' . rawurlencode($service['public_id'])),
+                'url'     => $serviceUrl,
                 'label'   => $variant['label'],
                 'details' => $details,
                 'price'   => $price === null ? null : $this->money((float) $price['active'], $currency, $locale),
@@ -332,14 +339,19 @@ class Business extends BaseController
             ];
         }
 
+        $serviceUrl = base_url(rawurlencode($businessSlug) . '/service/' . rawurlencode($service['public_id']));
+
         return view('serviceSlots', $this->layout($site, $businessSlug, $locale) + [
+            'breadcrumbs'      => $this->breadcrumbs($businessSlug, $locale, [
+                ['name' => $service['name'], 'url' => $serviceUrl], ['name' => lang('Business.slots.breadcrumb')],
+            ]),
             'page_title'       => lang('Business.slots.title', [$service['name']]),
             'business_name'    => $site['business']['name'],
             'meta_description' => $site['meta']['description'],
             'meta_keywords'    => $site['meta']['keywords'],
             'site'             => $site,
             'service'          => $service + [
-                'url'     => base_url(rawurlencode($businessSlug) . '/service/' . rawurlencode($service['public_id'])),
+                'url'     => $serviceUrl,
                 'label'   => $variant['label'],
                 'details' => $details,
                 'price'   => $price === null ? null : $this->money((float) $price['active'], $currency, $locale),
@@ -379,6 +391,7 @@ class Business extends BaseController
 
         return view('cart', $this->layout($site, $businessSlug, $locale) + [
             'page_title'       => lang('Business.cart.title'),
+            'breadcrumbs'      => $this->breadcrumbs($businessSlug, $locale, [['name' => lang('Business.cart.title')]]),
             'business_name'    => $site['business']['name'],
             'meta_description' => $site['meta']['description'],
             'meta_keywords'    => $site['meta']['keywords'],
@@ -561,6 +574,10 @@ class Business extends BaseController
 
                 return view('payment', $page + [
                     'page_title'  => lang('Business.order-status.title'),
+                    'breadcrumbs' => $this->breadcrumbs($businessSlug, $locale, [
+                        ['name' => lang('Business.order-status.title'), 'url' => $this->businessUrl($businessSlug, 'check-order-status')],
+                        ['name' => (string) $orderNumber],
+                    ]),
                     'order'       => $this->orderView($order, (string) $order['currency'], $locale),
                     'just_placed' => false,
                     'looked_up'   => true,
@@ -572,7 +589,8 @@ class Business extends BaseController
         }
 
         return view('checkOrderStatus', $page + [
-            'page_title' => lang('Business.order-status.title'),
+            'page_title'  => lang('Business.order-status.title'),
+            'breadcrumbs' => $this->breadcrumbs($businessSlug, $locale, [['name' => lang('Business.order-status.title')]]),
             'number'     => (string) (session()->getFlashdata('lookup_number') ?? $orderNumber ?? ''),
             'contact'    => (string) (session()->getFlashdata('lookup_contact') ?? ''),
             'error'      => session()->getFlashdata('lookup_error'),
@@ -613,6 +631,7 @@ class Business extends BaseController
 
         return view('contactUs', $this->layout($site, $businessSlug, $locale) + [
             'page_title'       => lang('Business.contact-page.title'),
+            'breadcrumbs'      => $this->breadcrumbs($businessSlug, $locale, [['name' => lang('Business.contact-page.title')]]),
             'business_name'    => $site['business']['name'],
             'meta_description' => $site['meta']['description'],
             'meta_keywords'    => $site['meta']['keywords'],
@@ -724,6 +743,7 @@ class Business extends BaseController
 
         return view('staff', $this->layout($site, $businessSlug, $locale) + [
             'page_title'       => lang('Business.staff-page.title'),
+            'breadcrumbs'      => $this->breadcrumbs($businessSlug, $locale, [['name' => lang('Business.staff-page.title')]]),
             'business_name'    => $site['business']['name'],
             'meta_description' => $site['meta']['description'],
             'meta_keywords'    => $site['meta']['keywords'],
@@ -937,6 +957,7 @@ class Business extends BaseController
             'sections'         => $this->drawable([$section]),
             'preview'          => 'design',
             'system_home_url'  => $this->businessUrl($businessSlug, 'home'),
+            'system_home_name' => lang('Business.home'),
         ]));
     }
 
@@ -989,6 +1010,8 @@ class Business extends BaseController
             'url'     => $this->businessUrl($businessSlug, ($item['is_home'] ?? false) ? '' : 'pages/' . rawurlencode((string) $item['slug'])),
             'current' => ($item['public_id'] ?? null) === $page['public_id'],
         ], (array) ($data['menu'] ?? []));
+        // the system's home is the catalog beside the business's own home page, else the home itself
+        $hasOwnHome = array_filter((array) ($data['menu'] ?? []), fn (array $item): bool => (bool) ($item['is_home'] ?? false)) !== [];
 
         $html = view('customizedPage', $this->layout($site, $businessSlug, $locale) + [
             // the home page has the website's meta tags; another page its own, else the website's
@@ -1001,6 +1024,7 @@ class Business extends BaseController
             'sections'         => $this->drawable((array) ($data['sections'] ?? [])),
             'preview'          => ($page['preview'] ?? false) ? 'page' : null,
             'system_home_url'  => $this->businessUrl($businessSlug, 'home'),
+            'system_home_name' => lang($hasOwnHome ? 'Business.customized.catalog' : 'Business.home'),
         ]);
 
         return ($page['preview'] ?? false) ? $this->previewHeaders($html) : $html;
@@ -1379,6 +1403,7 @@ class Business extends BaseController
     {
         return $this->layout($site, $businessSlug, $locale) + [
             'page_title'       => lang('Business.order-history.title'),
+            'breadcrumbs'      => $this->breadcrumbs($businessSlug, $locale, [['name' => lang('Business.order-history.title')]]),
             'business_name'    => $site['business']['name'],
             'meta_description' => $site['meta']['description'],
             'meta_keywords'    => $site['meta']['keywords'],
@@ -2548,6 +2573,38 @@ class Business extends BaseController
     private function businessUrl(string $businessSlug, string $path): string
     {
         return base_url(rawurlencode($businessSlug) . ($path === '' ? '' : '/' . $path));
+    }
+
+    /**
+     * A page's breadcrumbs (section_parts/breadcrumbs): Home, then Catalog (the system's home) when the business has
+     * its own home page, then the page's own trail
+     * @param string                                  $businessSlug
+     * @param string                                  $locale
+     * @param list<array{name: string, url?: string}> $trail the last one, the page itself, without a url
+     * @return list<array{name: string, url: string|null}>
+     */
+    private function breadcrumbs(string $businessSlug, string $locale, array $trail): array
+    {
+        $crumbs = [['name' => lang('Business.home'), 'url' => $this->businessUrl($businessSlug, '')]];
+        if ($this->hasOwnHome($businessSlug, $locale)) {
+            $crumbs[] = ['name' => lang('Business.customized.catalog'), 'url' => $this->businessUrl($businessSlug, 'home')];
+        }
+        foreach ($trail as $crumb) {
+            $crumbs[] = ['name' => (string) $crumb['name'], 'url' => $crumb['url'] ?? null];
+        }
+
+        return $crumbs;
+    }
+
+    /**
+     * Whether the business has its own home page published (v1/mart/webpage, cached by the API), so that /{business}
+     * is that page and the system's home is its catalog; an API that cannot say is taken as no
+     */
+    private function hasOwnHome(string $businessSlug, string $locale): bool
+    {
+        [$code, $body] = $this->fetchApi('v1/mart/webpage', ['business_slug' => $businessSlug, 'page_slug' => '', 'lang' => $locale]);
+
+        return $code === 200 && is_array($body['data']['page'] ?? null);
     }
 
     /** The checkout as the customer left it, every field there and a text */

@@ -4,7 +4,7 @@
  * first, with the address, the telephone number and the way there on Google Maps
  *
  * @var array  $site
- * @var string $home_url
+ * @var list<array> $breadcrumbs Business::breadcrumbs()
  * @var array  $business_contact {address: list<string>, phone: {label, tel}|null, email: string, website: {url, label}|null}
  * @var list<array{name: string, online: bool, address: list<string>, phone: array|null, maps_url: string|null}> $stores
  * @var array  $contact_form {token: string|null, action, sent: string|null, error: string|null, errors: array<string, string>, old: array<string, string>}
@@ -59,12 +59,7 @@ $feedback = static fn (string $field): string => isset($form['errors'][$field]) 
     <div class="page-title light-background">
         <div class="container d-lg-flex justify-content-between align-items-center">
             <h1 class="mb-2 mb-lg-0"><?= lang('Business.contact-page.title') ?></h1>
-            <nav class="breadcrumbs">
-                <ol>
-                    <li><a href="<?= esc($home_url, 'attr') ?>"><?= esc($business['name']) ?></a></li>
-                    <li class="current"><?= lang('Business.contact-page.title') ?></li>
-                </ol>
-            </nav>
+            <?= view('section_parts/breadcrumbs', ['breadcrumbs' => $breadcrumbs]) ?>
         </div>
     </div>
     <section id="contact-us" class="contact-us section">

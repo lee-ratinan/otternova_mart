@@ -8,9 +8,10 @@ return [
     'load-failed'   => 'Halaman ini tidak dapat dimuatkan. Sila cuba lagi sebentar nanti.',
     // the pages a business designs itself (_layout_customized.php)
     'home'            => 'Laman Utama',
+    'breadcrumbs'     => 'Laluan navigasi', // the label of a page's breadcrumbs
     'preview-expired' => 'Pautan pratonton ini telah tamat tempoh. Sila buka pratonton sekali lagi dari papan pemuka anda.',
     'customized'      => [
-        'shop'           => 'Kedai',
+        'catalog'        => 'Katalog', // the system's home beside the business's own home page
         'preview-page'   => 'Pratonton: beginilah rupa halaman seperti yang disimpan. Pelawat hanya dapat melihatnya selepas ia diterbitkan.',
         'preview-design' => 'Pratonton reka bentuk dengan teks contoh. Teks dan gambar anda sendiri akan menggantikannya.',
         'filter-all'     => 'Semua', // the portfolio's filter showing every card

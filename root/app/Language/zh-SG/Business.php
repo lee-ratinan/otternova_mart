@@ -8,9 +8,10 @@ return [
     'load-failed'   => '无法加载此页面，请稍后再试。',
     // the pages a business designs itself (_layout_customized.php)
     'home'            => '主页',
+    'breadcrumbs'     => '导览路径', // the label of a page's breadcrumbs
     'preview-expired' => '此预览链接已过期，请从您的管理面板重新打开预览。',
     'customized'      => [
-        'shop'           => '商店',
+        'catalog'        => '商品目录', // the system's home beside the business's own home page
         'preview-page'   => '预览：这是页面保存后的样子。发布后访客才能看到。',
         'preview-design' => '使用示例文字的设计预览。实际会换成您自己的文字和图片。',
         'filter-all'     => '全部', // the portfolio's filter showing every card

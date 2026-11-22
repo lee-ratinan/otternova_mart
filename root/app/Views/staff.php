@@ -5,7 +5,7 @@
  * the business has more than one place) and the customers they do not serve
  *
  * @var array  $site
- * @var string $home_url
+ * @var list<array> $breadcrumbs Business::breadcrumbs()
  * @var bool   $many_stores
  * @var list<array{name: string, initials: string, avatar_url: string|null, bio: string|null, attributes: list<array{name: string, values: list<string>}>,
  *      languages: list<array{name: string, level: string}>, restrictions: list<string>, stores: list<string>}> $people
@@ -41,12 +41,7 @@ $business = $site['business'];
     <div class="page-title light-background">
         <div class="container d-lg-flex justify-content-between align-items-center">
             <h1 class="mb-2 mb-lg-0"><?= lang('Business.staff-page.title') ?></h1>
-            <nav class="breadcrumbs">
-                <ol>
-                    <li><a href="<?= esc($home_url, 'attr') ?>"><?= esc($business['name']) ?></a></li>
-                    <li class="current"><?= lang('Business.staff-page.title') ?></li>
-                </ol>
-            </nav>
+            <?= view('section_parts/breadcrumbs', ['breadcrumbs' => $breadcrumbs]) ?>
         </div>
     </div>
     <section id="staff" class="staff-list section">

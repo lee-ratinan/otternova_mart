@@ -9,9 +9,10 @@ return [
     'load-failed'   => 'ไม่สามารถโหลดหน้านี้ได้ กรุณาลองใหม่อีกครั้งในภายหลัง',
     // the pages a business designs itself (_layout_customized.php)
     'home'            => 'หน้าแรก',
+    'breadcrumbs'     => 'เส้นทางนำทาง', // the label of a page's breadcrumbs
     'preview-expired' => 'ลิงก์ตัวอย่างนี้หมดอายุแล้ว กรุณาเปิดตัวอย่างใหม่จากแดชบอร์ด',
     'customized'      => [
-        'shop'           => 'ร้านค้า',
+        'catalog'        => 'แคตตาล็อก', // the system's home beside the business's own home page
         'preview-page'   => 'ตัวอย่าง: หน้านี้ตามที่บันทึกไว้ ผู้เข้าชมจะเห็นเมื่อเผยแพร่แล้วเท่านั้น',
         'preview-design' => 'ตัวอย่างแบบพร้อมข้อความตัวอย่าง ข้อความและรูปภาพของคุณจะแสดงแทนที่',
         'filter-all'     => 'ทั้งหมด', // the portfolio's filter showing every card

@@ -45,12 +45,7 @@ $label     = static fn (string $key, string $fallback): string => ($text = lang(
     <div class="page-title light-background">
         <div class="container d-lg-flex justify-content-between align-items-center">
             <h1 class="mb-2 mb-lg-0"><?= lang('Business.order-history.title') ?></h1>
-            <nav class="breadcrumbs">
-                <ol>
-                    <li><a href="<?= esc($home_url, 'attr') ?>"><?= esc($business['name']) ?></a></li>
-                    <li class="current"><?= lang('Business.order-history.title') ?></li>
-                </ol>
-            </nav>
+            <?= view('section_parts/breadcrumbs', ['breadcrumbs' => $breadcrumbs]) ?>
         </div>
     </div>
     <section id="order-history" class="order-history section">

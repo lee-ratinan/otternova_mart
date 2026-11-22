@@ -13,6 +13,7 @@
  * @var array|null  $logo             {url, shape}
  * @var list<array> $menu             {name, url, current}: the published pages, the home page first
  * @var string      $system_home_url  /{business}/home, the system's home with the products and services
+ * @var string      $system_home_name 'Catalog' beside the business's own home page, else 'Home'
  * @var string      $business_slug
  * @var array       $site             v1/mart/site: business {name, description, contact, country_code, shows_staff}, languages
  * @var string|null $preview          'page' (a preview link) or 'design' (a design with sample texts), else null
@@ -127,7 +128,7 @@ $faviconUrl = isset($logo['url']) && $logo['shape'] === 'S' ? $logo['url'] : ass
                 <?php foreach ($menu as $item): ?>
                     <li><a href="<?= esc($item['url'], 'attr') ?>"<?= $item['current'] ? ' class="active" aria-current="page"' : '' ?>><?= esc($item['name']) ?></a></li>
                 <?php endforeach ?>
-                <li><a href="<?= esc($system_home_url, 'attr') ?>"><?= esc(lang('Business.customized.shop')) ?></a></li>
+                <li><a href="<?= esc($system_home_url, 'attr') ?>"><?= esc($system_home_name) ?></a></li>
             </ul>
             <i class="mobile-nav-toggle d-xl-none bi bi-list"></i>
         </nav>
@@ -216,7 +217,7 @@ $socialLinks  = socialLinksOf($site);
                     <div class="footer-widget">
                         <h4><?= lang('Business.footer.shop') ?></h4>
                         <ul class="footer-links">
-                            <li><a href="<?= esc($system_home_url, 'attr') ?>"><?= lang('Business.customized.shop') ?></a></li>
+                            <li><a href="<?= esc($system_home_url, 'attr') ?>"><?= esc($system_home_name) ?></a></li>
                             <li><a href="<?= esc($footerSlugUrl('cart'), 'attr') ?>"><?= lang('Business.footer.cart') ?></a></li>
                             <?php if (! empty($footerBusiness['shows_staff'])): ?>
                                 <li><a href="<?= esc($footerSlugUrl('staff'), 'attr') ?>"><?= lang('Business.staff-page.title') ?></a></li>

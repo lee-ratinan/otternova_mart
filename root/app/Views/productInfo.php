@@ -20,7 +20,6 @@ $inStock  = array_values(array_filter($variants, static fn (array $variant): boo
 $chosen   = $inStock[0] ?? $variants[0] ?? null;
 $rating   = (float) $artifact['rating']['average'];
 $ratings  = (int) $artifact['rating']['count'];
-$homeUrl  = base_url(rawurlencode($business['slug']));
 $cartUrl  = base_url(rawurlencode($business['slug']) . '/cart');
 $noImage  = 'data:image/svg+xml,' . rawurlencode('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 3"><rect width="4" height="3" fill="#e9ecef"/></svg>');
 $valueOf  = static function (array $variant, string $optionId): ?string {
@@ -65,12 +64,7 @@ $stars = static function (float $average): string {
     <div class="page-title light-background">
         <div class="container d-lg-flex justify-content-between align-items-center">
             <h1 class="mb-2 mb-lg-0"><?= esc($artifact['name']) ?></h1>
-            <nav class="breadcrumbs">
-                <ol>
-                    <li><a href="<?= esc($homeUrl, 'attr') ?>"><?= esc($business['name']) ?></a></li>
-                    <li class="current"><?= esc($artifact['name']) ?></li>
-                </ol>
-            </nav>
+            <?= view('section_parts/breadcrumbs', ['breadcrumbs' => $breadcrumbs]) ?>
         </div>
     </div>
     <section id="product-details" class="product-details section">

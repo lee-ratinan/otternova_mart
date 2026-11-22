@@ -38,17 +38,9 @@ $status   = ['P' => ['warning', 'hourglass-split'], 'C' => ['success', 'check-ci
     <div class="page-title light-background">
         <div class="container d-lg-flex justify-content-between align-items-center">
             <h1 class="mb-2 mb-lg-0"><?= $title ?></h1>
-            <nav class="breadcrumbs">
-                <ol>
-                    <li><a href="<?= esc($home_url, 'attr') ?>"><?= esc($business['name']) ?></a></li>
-                    <?php if ($looked_up): ?>
-                        <li><a href="<?= esc(base_url(rawurlencode($business_slug) . '/check-order-status'), 'attr') ?>"><?= $title ?></a></li>
-                        <li class="current"><?= esc($order['number']) ?></li>
-                    <?php else: ?>
-                        <li class="current"><?= $title ?></li>
-                    <?php endif ?>
-                </ol>
-            </nav>
+            <?php if ($looked_up): ?>
+                <?= view('section_parts/breadcrumbs', ['breadcrumbs' => $breadcrumbs]) ?>
+            <?php endif ?>
         </div>
     </div>
     <section id="payment" class="payment section">

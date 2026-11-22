@@ -8,9 +8,10 @@ return [
     'load-failed'   => 'このページを読み込めませんでした。しばらくしてからもう一度お試しください。',
     // the pages a business designs itself (_layout_customized.php)
     'home'            => 'ホーム',
+    'breadcrumbs'     => 'パンくずリスト', // the label of a page's breadcrumbs
     'preview-expired' => 'このプレビューリンクは有効期限が切れています。ダッシュボードからもう一度プレビューを開いてください。',
     'customized'      => [
-        'shop'           => 'ショップ',
+        'catalog'        => 'カタログ', // the system's home beside the business's own home page
         'preview-page'   => 'プレビュー：保存された状態のページです。公開されるまで訪問者には表示されません。',
         'preview-design' => 'サンプルテキストを使ったデザインのプレビューです。実際にはご自身のテキストと画像が入ります。',
         'filter-all'     => 'すべて', // the portfolio's filter showing every card

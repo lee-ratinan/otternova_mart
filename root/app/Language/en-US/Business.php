@@ -11,9 +11,10 @@ return [
     'load-failed'   => 'This page could not be loaded. Please try again shortly.',
     // the pages a business designs itself (_layout_customized.php)
     'home'            => 'Home',
+    'breadcrumbs'     => 'Breadcrumb', // the label of a page's breadcrumbs
     'preview-expired' => 'This preview link has expired. Please open the preview again from your dashboard.',
     'customized'      => [
-        'shop'           => 'Shop',
+        'catalog'        => 'Catalog', // the system's home beside the business's own home page
         'preview-page'   => 'Preview: this is how the page looks as saved. Visitors only see it once it is published.',
         'preview-design' => 'Preview of a design, with sample text. Your own text and pictures go in its place.',
         'filter-all'     => 'All', // the portfolio's filter showing every card

@@ -21,7 +21,6 @@
 $this->extend('_layout_otternova');
 
 $business  = $site['business'];
-$homeUrl   = base_url(rawurlencode($business['slug']));
 $cartUrl   = base_url(rawurlencode($business['slug']) . '/add-to-cart');
 $searchUrl = base_url(rawurlencode($business['slug']) . '/search-sessions');
 $initial   = static fn (string $name): string => mb_strtoupper(mb_substr($name, 0, 1));
@@ -84,13 +83,7 @@ $filtered  = $store !== null || $chosen_staff !== null || $date_from !== null ||
     <div class="page-title light-background">
         <div class="container d-lg-flex justify-content-between align-items-center">
             <h1 class="mb-2 mb-lg-0"><?= esc(lang('Business.slots.title', [$service['name']])) ?></h1>
-            <nav class="breadcrumbs">
-                <ol>
-                    <li><a href="<?= esc($homeUrl, 'attr') ?>"><?= esc($business['name']) ?></a></li>
-                    <li><a href="<?= esc($service['url'], 'attr') ?>"><?= esc($service['name']) ?></a></li>
-                    <li class="current"><?= lang('Business.sessions.breadcrumb') ?></li>
-                </ol>
-            </nav>
+            <?= view('section_parts/breadcrumbs', ['breadcrumbs' => $breadcrumbs]) ?>
         </div>
     </div>
     <div class="container session-search">

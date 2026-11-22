@@ -68,13 +68,6 @@ foreach (array_keys($errors) as $field) {
     <div class="page-title light-background">
         <div class="container d-lg-flex justify-content-between align-items-center">
             <h1 class="mb-2 mb-lg-0"><?= lang('Business.checkout.title') ?></h1>
-            <nav class="breadcrumbs">
-                <ol>
-                    <li><a href="<?= esc(base_url(rawurlencode($business['slug'] ?? $business_slug)), 'attr') ?>"><?= esc($business['name']) ?></a></li>
-                    <li><a href="<?= esc($urls['cart'], 'attr') ?>"><?= lang('Business.cart.title') ?></a></li>
-                    <li class="current"><?= lang('Business.checkout.title') ?></li>
-                </ol>
-            </nav>
         </div>
     </div>
     <section id="checkout" class="checkout section">
