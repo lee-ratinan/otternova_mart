@@ -2735,13 +2735,22 @@ class Business extends BaseController
             } elseif ($field === 'discount') {
                 $out['discount'] = $this->discountError(['code' => $code]);
             } elseif ($field === 'payment') {
-                $out['payment'] = lang('Business.checkout.payment-required');
+                $out['payment'] = $this->paymentError($code);
             } else {
                 $out[$field] = $code === 'required' ? lang('Business.checkout.required') : lang('Business.checkout.invalid');
             }
         }
 
         return $out;
+    }
+
+    private function paymentError(?string $code): ?string
+    {
+        return match ($code) {
+            null               => null,
+            'not_for_shipping' => lang('Business.checkout.payment-not-for-shipping'),
+            default            => lang('Business.checkout.payment-required'),
+        };
     }
 
     private function shippingError(?string $code): ?string
@@ -2772,7 +2781,7 @@ class Business extends BaseController
      * v1/mart/quote as the checkout page shows it
      * @return array{lines: list<array>, needs_shipping: bool, shipping_methods: list<array>, shipping: string,
      *               pickup_store: string, shipping_error: string|null, discount: array|null, discount_error: string|null,
-     *               payment_methods: list<array>, payment: string, totals: array}
+     *               payment_methods: list<array>, payment: string, payment_error: string|null, totals: array}
      */
     private function checkoutView(array $quote, array $lines, string $currency, string $locale): array
     {
@@ -2824,9 +2833,12 @@ class Business extends BaseController
                 'name'        => $p['name'],
                 'handler'     => $p['handler_code'],
                 'instruction' => $p['instruction'],
+                // false: kept to orders picked up at the store (cash), and this one is shipped
+                'available'   => $p['available'] ?? true,
             ], $quote['payment_methods']),
-            'payment' => $quote['payment'] ?? '',
-            'totals'  => [
+            'payment'       => $quote['payment'] ?? '',
+            'payment_error' => $this->paymentError($quote['payment_error'] ?? null),
+            'totals'        => [
                 'items'        => lang('Business.cart.items', [array_sum(array_column($quote['lines'], 'quantity'))]),
                 'subtotal'     => $money($totals['subtotal']),
                 'discount'     => (float) $totals['discount'] > 0 ? '−' . $money($totals['discount']) : null,

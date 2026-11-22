@@ -256,6 +256,8 @@ return [
         'invalid-email'           => '请输入有效的电邮地址。',
         'invalid-telephone'       => '请输入有效的电话号码。',
         'payment-required'        => '请选择付款方式。',
+        'payment-store-only'      => '仅限到店自取的订单',
+        'payment-not-for-shipping'=> '此付款方式仅限到店自取的订单，请选择其他方式。',
         'shipping-required'       => '请选择寄送方式。',
         'pickup-store-required'   => '请选择取货分店。',
         'unavailable-stock'       => '这些商品无法使用此方式。',

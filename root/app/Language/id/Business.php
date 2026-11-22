@@ -256,6 +256,8 @@ return [
         'invalid-email'           => 'Masukkan alamat email yang valid.',
         'invalid-telephone'       => 'Masukkan nomor telepon yang valid.',
         'payment-required'        => 'Pilih cara pembayaran.',
+        'payment-store-only'      => 'Hanya untuk pesanan yang diambil di toko',
+        'payment-not-for-shipping'=> 'Cara pembayaran ini hanya untuk pesanan yang diambil di toko. Pilih cara lain.',
         'shipping-required'       => 'Pilih cara pengiriman item Anda.',
         'pickup-store-required'   => 'Pilih toko tempat pengambilan.',
         'unavailable-stock'       => 'Tidak tersedia untuk item ini.',

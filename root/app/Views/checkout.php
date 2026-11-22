@@ -259,8 +259,8 @@ foreach (array_keys($errors) as $field) {
                             <div class="section-fields">
                                 <div class="option-list">
                                     <?php foreach ($checkout['payment_methods'] as $method): ?>
-                                        <label class="option">
-                                            <input type="radio" name="payment" value="<?= esc($method['public_id'], 'attr') ?>" required<?= ($state['choice']['payment'] === $method['public_id'] || count($checkout['payment_methods']) === 1) ? ' checked' : '' ?>>
+                                        <label class="option<?= $method['available'] ? '' : ' unavailable' ?>" data-payment="<?= esc($method['public_id'], 'attr') ?>">
+                                            <input type="radio" name="payment" value="<?= esc($method['public_id'], 'attr') ?>" required<?= $method['available'] && ($state['choice']['payment'] === $method['public_id'] || count($checkout['payment_methods']) === 1) ? ' checked' : '' ?><?= $method['available'] ? '' : ' disabled' ?>>
                                             <span class="option-body">
                                                 <span class="option-name">
                                                     <i class="bi <?= $method['handler'] === 'promptpay_qr' ? 'bi-qr-code' : 'bi-cash-coin' ?>"></i> <?= esc($method['name']) ?>
@@ -268,11 +268,13 @@ foreach (array_keys($errors) as $field) {
                                                 <?php if ($method['instruction']): ?>
                                                     <span class="option-note"><?= esc($method['instruction']) ?></span>
                                                 <?php endif ?>
+                                                <!-- cash and the like: only for a pickup at the store, not for a parcel -->
+                                                <span class="option-note" data-store-only<?= $method['available'] ? ' hidden' : '' ?>><?= lang('Business.checkout.payment-store-only') ?></span>
                                             </span>
                                         </label>
                                     <?php endforeach ?>
                                 </div>
-                                <div class="field-error" id="payment-error"<?= isset($errors['payment']) ? '' : ' hidden' ?>><?= esc($errors['payment'] ?? '') ?></div>
+                                <div class="field-error" id="payment-error"<?= isset($errors['payment']) || $checkout['payment_error'] !== null ? '' : ' hidden' ?>><?= esc($errors['payment'] ?? $checkout['payment_error'] ?? '') ?></div>
                             </div>
                             <div class="step-actions">
                                 <button type="button" class="btn btn-outline-secondary" data-back><i class="bi bi-arrow-left"></i> <?= lang('Business.checkout.back') ?></button>
@@ -434,6 +436,17 @@ foreach (array_keys($errors) as $field) {
                     option.querySelector('[data-fee]').textContent = method.fee;
                     option.querySelector('[data-note]').textContent = [method.unavailable, method.eta, method.store, method.description].filter(Boolean).join(' · ');
                 });
+                // a way to pay kept to the store (cash) cannot be had for a parcel: off, and unpicked
+                data.payment_methods.forEach((method) => {
+                    const option = form.querySelector('.option[data-payment="' + method.public_id + '"]');
+                    if (!option) return;
+                    const input = option.querySelector('input');
+                    option.classList.toggle('unavailable', !method.available);
+                    option.querySelector('[data-store-only]').hidden = method.available;
+                    input.disabled = !method.available;
+                    if (!method.available) input.checked = false;
+                });
+                show(byId('payment-error'), data.payment_error);
                 show(byId('shipping-error'), data.shipping_error);
                 show(byId('discount-error'), data.discount_error);
                 show(byId('discount-applied'), data.discount ? (data.discount.description || '') : '');

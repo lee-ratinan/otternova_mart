@@ -259,6 +259,8 @@ return [
         'invalid-email'           => 'Please enter a valid email address.',
         'invalid-telephone'       => 'Please enter a valid telephone number.',
         'payment-required'        => 'Please choose how to pay.',
+        'payment-store-only'      => 'Only for orders picked up at the store',
+        'payment-not-for-shipping'=> 'This way to pay is only for orders picked up at the store. Please choose another.',
         'shipping-required'       => 'Please choose how to send your items.',
         'pickup-store-required'   => 'Please choose the store to pick up at.',
         'unavailable-stock'       => 'Not available for these items.',

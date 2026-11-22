@@ -256,6 +256,8 @@ return [
         'invalid-email'           => '有効なメールアドレスを入力してください。',
         'invalid-telephone'       => '有効な電話番号を入力してください。',
         'payment-required'        => 'お支払い方法を選んでください。',
+        'payment-store-only'      => '店頭受取の注文のみ',
+        'payment-not-for-shipping'=> 'このお支払い方法は店頭受取の注文のみご利用いただけます。別の方法を選んでください。',
         'shipping-required'       => '配送方法を選んでください。',
         'pickup-store-required'   => '受取店舗を選んでください。',
         'unavailable-stock'       => 'これらの商品には利用できません。',

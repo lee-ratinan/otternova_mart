@@ -256,6 +256,8 @@ return [
         'invalid-email'           => '請輸入有效的電子郵件地址。',
         'invalid-telephone'       => '請輸入有效的電話號碼。',
         'payment-required'        => '請選擇付款方式。',
+        'payment-store-only'      => '僅限到店取貨的訂單',
+        'payment-not-for-shipping'=> '此付款方式僅限到店取貨的訂單，請選擇其他方式。',
         'shipping-required'       => '請選擇寄送方式。',
         'pickup-store-required'   => '請選擇取貨門市。',
         'unavailable-stock'       => '這些商品無法使用此方式。',

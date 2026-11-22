@@ -256,6 +256,8 @@ return [
         'invalid-email'           => 'Sila masukkan alamat e-mel yang sah.',
         'invalid-telephone'       => 'Sila masukkan nombor telefon yang sah.',
         'payment-required'        => 'Sila pilih cara pembayaran.',
+        'payment-store-only'      => 'Hanya untuk pesanan yang diambil di kedai',
+        'payment-not-for-shipping'=> 'Cara pembayaran ini hanya untuk pesanan yang diambil di kedai. Sila pilih cara lain.',
         'shipping-required'       => 'Sila pilih cara menghantar item anda.',
         'pickup-store-required'   => 'Sila pilih kedai untuk mengambil item.',
         'unavailable-stock'       => 'Tidak tersedia untuk item ini.',
