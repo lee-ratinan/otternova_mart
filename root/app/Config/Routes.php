@@ -6,7 +6,9 @@ use CodeIgniter\Router\RouteCollection;
 $routes->get('/', 'Home::index');
 $routes->get('search', 'Home::searchResults'); // use ?q=xxx
 $routes->get('terms-of-service', 'Home::termsOfService');
+$routes->get('terms-of-service/v/(:segment)', 'Home::termsOfService/$1'); // an earlier version, by its label
 $routes->get('privacy-policy', 'Home::privacyPolicy');
+$routes->get('privacy-policy/v/(:segment)', 'Home::privacyPolicy/$1'); // an earlier version, by its label
 
 // BUSINESS //
 // product info page
