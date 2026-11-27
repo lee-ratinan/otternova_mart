@@ -317,6 +317,7 @@ $socialLinks  = socialLinksOf($site);
                 <div class="legal-links">
                     <a href="<?= esc(base_url('terms-of-service'), 'attr') ?>"><?= lang('Business.footer.terms') ?></a>
                     <a href="<?= esc(base_url('privacy-policy'), 'attr') ?>"><?= lang('Business.footer.privacy') ?></a>
+                    <a href="<?= esc($footerSlugUrl('report'), 'attr') ?>" rel="nofollow"><?= lang('Business.report-page.report-business') ?></a>
                     <a href="<?= esc(base_url(), 'attr') ?>" class="powered-by"><?= lang('Business.footer.powered-by', [lang('System.site-title')]) ?></a>
                 </div>
             </div>

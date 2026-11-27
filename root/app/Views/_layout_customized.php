@@ -267,6 +267,7 @@ $socialLinks  = socialLinksOf($site);
             <div class="d-flex flex-column flex-md-row align-items-center justify-content-between gap-2">
                 <p class="copyright mb-0">© <?= date('Y') ?> <strong><?= esc($business_name) ?></strong>. <?= lang('Business.footer.rights') ?></p>
                 <div class="legal-links">
+                    <a href="<?= esc($footerSlugUrl('report'), 'attr') ?>" rel="nofollow"><?= lang('Business.report-page.report-business') ?></a>
                     <a href="<?= esc(base_url(), 'attr') ?>" class="powered-by"><?= lang('Business.footer.powered-by', [lang('System.site-title')]) ?></a>
                 </div>
             </div>

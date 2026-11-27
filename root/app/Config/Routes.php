@@ -41,6 +41,7 @@ $routes->post('(:any)/my-order-history/sign-out', 'Business::signOutOrderHistory
 $routes->get('(:any)/pages/(:segment)', 'Business::showBusinessPages/$1/$2');
 $routes->get('(:any)/design-preview/(:segment)', 'Business::designPreview/$1/$2');
 $routes->get('(:any)/contact-us', 'Business::contactUs/$1'); // the business's contact details and its stores
+$routes->get('(:any)/report', 'Business::report/$1'); // report the business, or ?item= one of its products or services, to Otternova
 $routes->get('(:any)/staff', 'Business::staff/$1'); // the people it shows, when it shows any
 // business main page
 $routes->get('(:any)/home', 'Business::systemHome/$1'); // show main home
@@ -57,4 +58,5 @@ $routes->post('(:any)/checkout-confirm', 'Business::checkoutConfirm/$1');
 $routes->post('(:any)/checkout-quote', 'Business::checkoutQuote/$1');
 $routes->post('(:any)/retrieve-order-status', 'Business::retrieveOrderStatus/$1');
 $routes->post('(:any)/contact-us/send', 'Business::sendMessage/$1'); // the contact form, to v1/mart/message
+$routes->post('(:any)/report/send', 'Business::sendReport/$1'); // the report form, to v1/mart/report
 $routes->post('(:any)/retrieve-order-history', 'Business::retrieveOrderHistory/$1');

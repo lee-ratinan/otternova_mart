@@ -708,6 +708,108 @@ class Business extends BaseController
         return $back->with('contact_error', in_array($code, [400, 409, 429], true) && $message !== null ? $message : lang('Business.contact-page.form-failed'));
     }
 
+    /** The reasons a visitor may report, as v1/mart/report takes them (ModerationReportModel::REASONS of the API) */
+    private const REPORT_REASONS = ['PROHIBITED', 'SCAM', 'MISLEADING', 'INTELLECTUAL_PROPERTY', 'OFFENSIVE', 'CHILD_SAFETY', 'OTHER'];
+
+    /**
+     * Report to Otternova: the form a visitor reports the business on, or, with ?item=, one of its products or
+     * services. A closed shop has it too, as its customers' orders go on. The form token comes from
+     * v1/mart/report-token, with the audiences the business declared (lgbt, naturist, adult): the page warns that
+     * reports about them are ignored and marked as spam. What sendReport() left for the page after a send is shown.
+     * @param string $businessSlug
+     * @return string
+     */
+    public function report(string $businessSlug): string
+    {
+        $locale = $this->request->getLocale();
+        $site   = $this->site($businessSlug, $locale, true);
+        $item   = $this->reportedItem($businessSlug, $locale, $this->request->getGet('item'));
+        [$code, $body] = $this->fetchApi('v1/mart/report-token', ['business_slug' => $businessSlug]);
+        $token     = $body['data']['form_token'] ?? null;
+        $audiences = array_values(array_intersect(['lgbt', 'naturist', 'adult'], (array) ($body['data']['declared_audiences'] ?? [])));
+        $errors    = session()->getFlashdata('report_errors');
+        $old       = session()->getFlashdata('report_old');
+
+        return view('report', $this->layout($site, $businessSlug, $locale) + [
+            'page_title'       => lang('Business.report-page.title'),
+            'breadcrumbs'      => $this->breadcrumbs($businessSlug, $locale, [['name' => lang('Business.report-page.title')]]),
+            'business_name'    => $site['business']['name'],
+            'meta_description' => $site['meta']['description'],
+            'meta_keywords'    => $site['meta']['keywords'],
+            'site'             => $site,
+            'item'             => $item,
+            'audiences'        => $audiences,
+            'reasons'          => self::REPORT_REASONS,
+            'report_form'      => [
+                'token'  => $code === 200 && is_string($token) ? $token : null,
+                'action' => $this->businessUrl($businessSlug, 'report/send'),
+                'sent'   => session()->getFlashdata('report_sent'),
+                'error'  => session()->getFlashdata('report_error'),
+                'errors' => is_array($errors) ? array_filter($errors, 'is_string') : [],
+                'old'    => is_array($old) ? $old : [],
+            ],
+        ]);
+    }
+
+    /**
+     * POST from the report form: reason_code, details, email, item (a product's or service's public_id, or empty),
+     * form_token and website (the honeypot). v1/mart/report takes it to Otternova; its messages, in the visitor's
+     * language, are shown back on the page, and the fields come back filled in after an error, but never the token or
+     * the honeypot. A report sent is answered the same whatever Otternova makes of it.
+     * @param string $businessSlug
+     * @return RedirectResponse To the form
+     */
+    public function sendReport(string $businessSlug): RedirectResponse
+    {
+        $item   = mb_substr($this->postText('item'), 0, 32);
+        $fields = [
+            'reason_code' => mb_substr($this->postText('reason_code'), 0, 32),
+            'details'     => mb_substr(is_string($this->request->getPost('details')) ? $this->request->getPost('details') : '', 0, 2500),
+            'email'       => mb_substr($this->postText('email'), 0, 200),
+        ];
+        [$code, $body] = $this->postApi('v1/mart/report', $fields + [
+            'business_slug'      => $businessSlug,
+            'artifact_public_id' => $item,
+            'locale'             => $this->request->getLocale(),
+            'form_token'         => $this->postText('form_token'),
+            'website'            => $this->postText('website'),
+        ]);
+        $back    = redirect()->to($this->businessUrl($businessSlug, 'report') . ($item === '' ? '' : '?item=' . rawurlencode($item)) . '#report-form');
+        $message = is_string($body['message'] ?? null) && $body['message'] !== '' ? $body['message'] : null;
+        if ($code === 201) {
+            return $back->with('report_sent', $message ?? lang('Business.report-page.sent'));
+        }
+        $back->with('report_old', $fields);
+        if ($code === 422 && is_array($body['errors'] ?? null)) {
+            return $back->with('report_errors', $body['errors'])->with('report_error', $message ?? lang('Business.report-page.check'));
+        }
+
+        // 400 (the form expired), 404 (the product is gone), 429 (too many reports): the API says which
+        return $back->with('report_error', in_array($code, [400, 404, 429], true) && $message !== null ? $message : lang('Business.report-page.failed'));
+    }
+
+    /**
+     * The product or service a report is about, from v1/mart/artifact; null for the business itself, or when it is
+     * not one the mart shows
+     * @param string $businessSlug
+     * @param string $locale
+     * @param mixed  $publicId ?item=
+     * @return array{public_id: string, name: string, type: string}|null
+     */
+    private function reportedItem(string $businessSlug, string $locale, mixed $publicId): ?array
+    {
+        if (! is_string($publicId) || ! preg_match('/^[0-9A-Za-z_-]{1,32}$/', $publicId)) {
+            return null;
+        }
+        [$code, $body] = $this->fetchApi('v1/mart/artifact', ['business_slug' => $businessSlug, 'public_id' => $publicId, 'lang' => $locale]);
+        $artifact      = $body['data']['artifact'] ?? null;
+        if ($code !== 200 || ! is_array($artifact) || ! is_string($artifact['public_id'] ?? null)) {
+            return null;
+        }
+
+        return ['public_id' => $artifact['public_id'], 'name' => (string) ($artifact['name'] ?? ''), 'type' => (string) ($artifact['type'] ?? 'P')];
+    }
+
     /**
      * Our staff: the people the business shows on its pages (v1/mart/staff), each with their picture, name, what
      * they do, the languages they speak, their bio, where they work and the customers they do not serve. A business

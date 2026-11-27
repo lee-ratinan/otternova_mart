@@ -246,6 +246,12 @@ $stars = static function (float $average): string {
                 </div>
             </div>
 
+            <?php // a visitor may report it to Otternova; see Business::report() ?>
+            <div class="text-end mt-4">
+                <a class="small text-muted" href="<?= esc(base_url(rawurlencode($business_slug) . '/report?item=' . rawurlencode($artifact['public_id'])), 'attr') ?>" rel="nofollow">
+                    <i class="bi bi-flag"></i> <?= lang('Business.report-page.report-service') ?></a>
+            </div>
+
         </div>
 
     </section>
